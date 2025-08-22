@@ -1,0 +1,303 @@
+/* Estilos generales */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;/* Elimina márgenes por defecto */
+    padding: 0;/* Elimina márgenes y rellenos por defecto */
+    background-color: #1a1a30; /* Fondo azul oscuro */
+    color: #fff; /* Texto en color blanco */
+}
+
+.container {
+    display: flex;/* Contenedor principal */
+    flex-direction: column;/* Dirección de la columna para apilar elementos */
+    align-items: center;/* Alineación centrada de los elementos */
+    justify-content: center;/* Justificación centrada de los elementos */
+    height: 100vh;/* Altura completa de la ventana */
+    padding: 10px;/* Espacio interno del contenedor */
+}
+
+.app {
+    background: #040c1f; /* Fondo azul más oscuro para el contenido */
+    padding: 10px;/* Espacio interno del contenido */
+    border-radius: 10px;/* Bordes redondeados */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);/* Sombra para dar profundidad */
+    width: 100%;/* Ancho completo del contenedor */
+    max-width: 800px;/* Ancho máximo del contenedor */
+    margin-bottom: 10px;/* Margen inferior para separar del siguiente elemento */
+}
+
+#chart-container {
+    width: 100%;/* Contenedor del gráfico */
+    margin-bottom: 10px;/* Margen inferior para separar del siguiente elemento */
+}
+
+#chart {
+    width: 100%;/* Ancho completo del gráfico */
+    height: auto;/* Altura automática del gráfico */
+    border: none;/* Sin borde */
+    background-color: #080a0f; /* Fondo azul oscuro para el gráfico */
+}
+
+#chart-name {
+    color: #dddae4; /* Texto en color blanco */
+    text-align: center;
+    margin-top: 6px;/* Margen superior para separar del gráfico */
+}
+
+#chart-name-highlight {
+    color: #e01919; /* Resaltado en color amarillo */
+}
+
+.controls {
+    display: flex;/* Controles para los botones */
+    flex-direction: column;/* Dirección de la columna para apilar botones */
+    align-items: center;/* Alineación centrada de los botones */
+}
+
+.time {
+    font-size: 12px;/* Tamaño de fuente del texto */
+    font-weight: bold;/* Negrita para el texto */
+    margin-bottom: 5px;/* Margen inferior para separar de los siguientes elementos */
+    color: #fff; /* Texto en color blanco */
+}
+
+.buttons {
+    display: flex;/* Contenedor de botones */
+    flex-wrap: wrap;/* Permite que los botones se ajusten en varias líneas */
+    justify-content: center;/* Justificación centrada de los botones */
+    margin-bottom: 5px;/* Margen inferior para separar de los siguientes elementos */
+}
+
+.buttons button {/* Estilos para los botones */
+    margin: 1px;/* Margen entre los botones */
+    padding: 5px;/* Espacio interno del botón */
+    font-size: 11px;/* Tamaño de fuente del texto */
+    font-weight: bold;/* Negrita para el texto del botón */
+    border: none;
+    border-radius: 6px;/* Bordes redondeados */
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    color: #fff; /* Texto en color blanco */
+}
+
+.buttons button.subtract {
+    background-color: #ff4d4d; /* Rojo */
+}
+
+.buttons button.add {
+    background-color: #4CAF50; /* Verde */
+}
+
+.buttons button.delete {
+    background-color: #ff9933; /* Naranja */
+}
+
+.buttons button.reset-chart {
+    background-color: #000; /* Negro */
+    color: #fff; /* Texto en color blanco */
+}
+
+.buttons button.red-line {
+    background-color: #ff3333; /* Rojo */
+}
+
+.buttons button.green-line {
+    background-color: #00cc66; /* Verde */
+}
+
+.buttons button.clear-lines {
+    background-color: #666; /* Gris */
+}
+
+.buttons button.next-entry2 {
+    background-color: #1722c0; /* Azul */
+}
+
+.buttons button.yellow-line {
+    background-color: #ffd700; /* Amarillo dorado */
+    color: #fff; /* Texto en color blanco */
+}
+
+.buttons button.yellow-line:hover {
+    background-color: #e6c200; /* Amarillo dorado más oscuro al pasar el mouse */
+}
+
+.buttons button.add-rosa {
+    background-color: #ff69b4; /* Rosa */
+}
+
+.buttons button.add-dorado {
+    background-color: #ffd700; /* Dorado */
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 5px;
+    width: 100%;
+}
+
+.input-group label {/* Etiqueta para el input */
+    margin-bottom: 3px;/* Espacio entre la etiqueta y el input */
+    font-size: 12px;/* Tamaño de fuente del texto */
+}
+
+.input-group input {/* Estilos para el input */
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    width: 80%;
+    text-align: center;
+    font-size: 12px;
+    background-color: #fff; /* Fondo blanco para el input */
+    color: #000; /* Texto en color negro */
+    margin-bottom: 3px;
+}
+
+.input-group button {
+    padding: 5px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    background-color: #4caf50; /* Verde */
+    color: #fff; /* Texto en color blanco */
+    transition: background-color 0.3s ease;
+    width: 80%;
+}
+
+.input-group button:hover {
+    background-color: #45a049; /* Verde más oscuro al pasar el mouse */
+}
+
+.info-group {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+    width: 100%;
+    margin-bottom: 5px;
+}
+
+.bet-info,
+.goal-info {
+    width: 48%;
+    text-align: center;
+}
+
+.bet-info h2,
+.goal-info h2 {
+    color: #666; /* Texto gris oscuro */
+    margin-bottom: 3px;
+    font-size: 12px;
+}
+
+.bet-info p,
+.goal-info p {
+    font-size: 12px;
+    margin: 0;
+}
+
+.bet-buttons {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 5px;
+}
+
+.bet-buttons .win,
+.bet-buttons .lose {
+    padding: 5px;
+    font-size: 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: 48%;
+}
+
+.win {
+    background-color: #4caf50; /* Verde */
+}
+
+.win:hover {
+    background-color: #358138; /* Verde más oscuro al pasar el mouse */
+}
+
+.lose {
+    background-color: #ff4d4d; /* Rojo */
+}
+
+.lose:hover {
+    background-color: #e60000; /* Rojo más oscuro al pasar el mouse */
+}
+
+.reset {
+    background-color: #ff9800; /* Naranja */
+    padding: 5px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.3s ease;
+    width: 80%;
+}
+
+.reset:hover {
+    background-color: #e68a00; /* Naranja más oscuro al pasar el mouse */
+}
+
+.entry-times {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.entry-time {
+    font-size: 12px;
+    color: #fff; /* Texto en color blanco */
+}
+
+@media screen and (max-width: 640px) {/* Estilos para dispositivos móviles */
+    .container {
+        padding: 5px;/* Espacio interno reducido */
+    }
+
+    .buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .buttons button {
+        width: 100%;
+        margin: 2px 0;
+    }
+
+    .input-group input,
+    .input-group button {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+
+    .info-group {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .info-group div {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+
+    .bet-buttons {
+        flex-direction: column;
+    }
+
+    .bet-buttons .win,
+    .bet-buttons .lose {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+}
