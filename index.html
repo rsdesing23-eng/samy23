@@ -1,0 +1,62 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Analizador de tendencias SAMY23</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <div class="container">
+    <div class="app">
+      <div id="chart-container">
+      <canvas id="chart" width="1200" height="800"></canvas>
+        <div id="chart-name">RICARDO<span id="chart-name-highlight">DAVID23</span></div>
+      </div>
+      <div class="controls">
+        <div class="buttons">
+          <button id="btn1" class="subtract">-2</button>
+          <button id="btn2" class="add">+2</button>
+          <button id="btn10" class="add-dorado">+4</button>
+          <button id="btn9" class="add-rosa">>=10</button>
+          <button id="btn3" class="delete">Atras</button>
+          <button id="btn4" class="reset-chart">Reiniciar</button>
+          <button id="btn5" class="red-line">Resistencia</button>
+          <button id="btn6" class="green-line">Soporte</button>
+          <button id="btn7" class="clear-lines">Borrar</button>
+          <button id="btn8" class="next-entry2">Entrada 1</button>
+          <button id="btn11" class="next-entry2">Entrada 2</button>
+          <button id="btn12" class="yellow-line">Zona Cero</button>
+        </div>
+        <div class="entry-times">
+          <div id="time" class="time">11:22:56</div>
+          <div id="proxima-entrada1" class="time"></div>
+          <div id="proxima-entrada2" class="time"></div>
+        </div>
+        <div class="input-group">
+          <label for="capital">Dinero a Invertir:</label>
+          <input type="number" id="capital" min="0" step="0.01" />
+          <button id="generate-bet">Generar Primera Apuesta</button>
+        </div>
+        <div class="info-group">
+          <div class="bet-info">
+            <h2>Apuesta Sugerida</h2>
+            <p id="bet-amount">-</p>
+          </div>
+          <div class="goal-info">
+            <h2>Objetivo de la Sesión</h2>
+            <p id="session-goal">-</p>
+          </div>
+        </div>
+        <div class="bet-buttons">
+          <button id="win-bet" class="win">Ganada</button>
+          <button id="lose-bet" class="lose">Perdida</button>
+        </div>
+        <button id="reset" class="reset">Reiniciar</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
