@@ -28,7 +28,7 @@ body {
 
 #chart-container {
     width: 100%;/* Contenedor del gráfico */
-    margin-bottom: 10px;/* Margen inferior para separar del siguiente elemento */
+    margin-bottom: 20px;/* Margen inferior para separar del siguiente elemento */
 }
 
 #chart {
@@ -50,7 +50,7 @@ body {
 
 .controls {
     display: flex;/* Controles para los botones */
-    flex-direction: column;/* Dirección de la columna para apilar botones */
+    flex-direction: row;/* Dirección de la columna para apilar botones */
     align-items: center;/* Alineación centrada de los botones */
 }
 
@@ -251,53 +251,53 @@ body {
 .entry-times {
     display: flex;
     justify-content: space-around;
-    width: 100%;
+    width: 100%;/* Contenedor para los tiempos de entrada */
     margin-bottom: 10px;
 }
 
 .entry-time {
-    font-size: 12px;
+    font-size: 12px;/* Tamaño de fuente del texto */
     color: #fff; /* Texto en color blanco */
 }
 
-@media screen and (max-width: 640px) {/* Estilos para dispositivos móviles */
+@media screen and (max-width: 600px) {/* Estilos para dispositivos móviles */
     .container {
-        padding: 5px;/* Espacio interno reducido */
+        padding: 20px;/* Espacio interno reducido */
     }
 
     .buttons {
-        flex-direction: column;
-        align-items: center;
+        flex-direction: column;/* Dirección de la columna para apilar botones */
+        align-items: center;/* Alineación centrada de los botones */
     }
 
     .buttons button {
-        width: 100%;
-        margin: 2px 0;
+        width: 100%;/* Ancho completo para botones en dispositivos móviles */
+        margin: 2px 0;/* Margen vertical entre botones */
     }
 
     .input-group input,
     .input-group button {
-        width: 100%;
-        margin-bottom: 5px;
+        width: 100%;/* Ancho completo para input y botón en dispositivos móviles */
+        margin-bottom: 5px;/* Margen inferior para separar de los siguientes elementos */
     }
 
     .info-group {
-        flex-direction: column;
-        align-items: center;
+        flex-direction: column;/* Dirección de la columna para apilar información */
+        align-items: center;/* Alineación centrada de la información */
     }
 
     .info-group div {
-        width: 100%;
-        margin-bottom: 5px;
+        width: 100%;/* Ancho completo para los elementos de información */
+        margin-bottom: 5px;/* Margen inferior para separar de los siguientes elementos */
     }
 
     .bet-buttons {
-        flex-direction: column;
+        flex-direction: column;/* Dirección de la columna para apilar botones de apuesta */
     }
 
     .bet-buttons .win,
     .bet-buttons .lose {
-        width: 100%;
-        margin-bottom: 5px;
+        width: 100%;/* Ancho completo para botones de apuesta en dispositivos móviles */
+        margin-bottom: 5px;/* Margen inferior para separar de los siguientes elementos */
     }
 }
