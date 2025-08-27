@@ -50,7 +50,7 @@ body {
 
 .controls {
     display: flex;/* Controles para los botones */
-    flex-direction: row;/* Dirección de la columna para apilar botones */
+    flex-direction: column;/* Dirección de la columna para apilar botones */
     align-items: center;/* Alineación centrada de los botones */
 }
 
