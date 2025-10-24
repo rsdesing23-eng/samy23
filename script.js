@@ -1,226 +1,182 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // App 1
-    const capitalInput = document.getElementById('capital');// se refiere al input de capital
+    // ===================== LÓGICA DE APUESTAS =====================
+    const capitalInput = document.getElementById('capital');
     const generateBetBtn = document.getElementById('generate-bet');
     const winBetBtn = document.getElementById('win-bet');
     const loseBetBtn = document.getElementById('lose-bet');
     const resetBtn = document.getElementById('reset');
-    const betAmountDisplay = document.getElementById('bet-amount');// se refiere a la cantidad de apuesta
+    const betAmountDisplay = document.getElementById('bet-amount');
     const sessionGoalDisplay = document.getElementById('session-goal');
 
-    let capital = 0;
-    let betAmount = 0;
-    let currentBank = 0;
-    let sessionGoal = 0;
+    let capital = 0, betAmount = 0, currentBank = 0, sessionGoal = 0;
 
     function updateDisplays() {
         betAmountDisplay.textContent = `${betAmount.toFixed(2)} / ${(betAmount * 2).toFixed(2)}`;
         sessionGoalDisplay.textContent = sessionGoal.toFixed(2);
     }
 
-    function generateFirstBet() {
+    generateBetBtn.addEventListener('click', () => {
         capital = parseFloat(capitalInput.value);
-        if (isNaN(capital) || capital <= 0) {
-            alert('Por favor, ingresa un monto válido.');
-            return;
-        }
-        sessionGoal = capital * 0.2;// objetivo de la sesión del 20% del capital
-        betAmount = capital * 0.02;// apuesta inicial del 2% del capital
+        if (isNaN(capital) || capital <= 0) return alert('Por favor, ingresa un monto válido.');
+        sessionGoal = capital * 0.2;
+        betAmount = capital * 0.02;
         currentBank = capital;
         updateDisplays();
-    }
+    });
 
-    function processWin() {
-        currentBank += betAmount;// se refiere a sumar la cantidad ganada al banco actual
-        betAmount *= 1.2;// se refiere a aumentar la apuesta en un 20%
-        updateDisplays();
-    }   
+    winBetBtn.addEventListener('click', () => { currentBank += betAmount; betAmount *= 1.2; updateDisplays(); });
+    loseBetBtn.addEventListener('click', () => { currentBank -= betAmount; betAmount *= 1.5; updateDisplays(); });
+    resetBtn.addEventListener('click', () => { capitalInput.value=''; betAmountDisplay.textContent='-'; sessionGoalDisplay.textContent='-'; });
 
-    function processLoss() {
-        currentBank -= betAmount;
-        betAmount *= 1.5;
-        if (betAmount < capital * 0.01) {// apuesta mínima del 1% del capital
-            betAmount = capital * 0.01;// se refiere a la apuesta mínima
-        }
-        updateDisplays();
-    }
-
-    function reset() {
-        capitalInput.value = '';
-        betAmountDisplay.textContent = '-';
-        sessionGoalDisplay.textContent = '-';
-        capital = 0;
-        betAmount = 0;
-        currentBank = 0;
-        sessionGoal = 0;
-    }
-
-    generateBetBtn.addEventListener('click', generateFirstBet);// se refiere al botón de generar apuesta
-    winBetBtn.addEventListener('click', processWin);
-    loseBetBtn.addEventListener('click', processLoss);
-    resetBtn.addEventListener('click', reset);
-
-    // App 2
-    const canvas = document.getElementById('chart');// se refiere al lienzo del gráfico
-    const ctx = canvas.getContext('2d');// se refiere al contexto del lienzo
-
-    const margin = 20;// se refiere al margen del gráfico
-    canvas.width = 800;// se refiere al ancho del lienzo
-    canvas.height = 600;// se refiere a la altura del lienzo
-    const chartWidth = canvas.width - 2 * margin; // se refiere al ancho del gráfico
-    const chartHeight = canvas.height - 2 * margin;
-
-    let data = [];
-    let accumulatedSum = 0;// se refiere a la suma acumulada de los datos
-    let colors = [];
-
-    let horizontalLines = [];// se refiere a las líneas horizontales del gráfico
+    // ===================== GRAFICO 1 (PUNTOS Y LÍNEAS) =====================
+    const canvas = document.getElementById('chart');
+    const ctx = canvas.getContext('2d');
+    let data = [], colors = [], horizontalLines = [];
+    const margin = 20, chartWidth = canvas.width - 2 * margin, chartHeight = canvas.height - 2 * margin;
 
     function drawChart() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height); // se refiere a limpiar el lienzo
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (data.length === 0) return;
 
-        const minY = Math.min(...data);// se refiere al valor mínimo de los datos
-        const maxY = Math.max(...data);// se refiere al valor máximo de los datos
-        const yRange = maxY - minY;
+        const minY = Math.min(...data);
+        const maxY = Math.max(...data);
+        const yRange = maxY - minY || 1;
 
-        data.forEach((point, index) => {
-            const x = margin + (index / (data.length - 1)) * chartWidth; // se refiere a la posición horizontal del punto
-            const y = margin + chartHeight - ((point - minY) / yRange) * chartHeight; // se refiere a la posición vertical del punto
-            ctx.fillStyle = colors[index] || '#66a3ff'; // se refiere al color del punto
+        // Línea principal
+        ctx.beginPath();
+        ctx.strokeStyle = '#fcfcfc';// color blanco
+        ctx.globalAlpha = 0.5;// transparencia
+        ctx.lineWidth = 2;// grosor
 
-            ctx.shadowColor = colors[index] || '#66a3ff';// se refiere al color de la sombra del punto
-            ctx.shadowBlur = 20; // se refiere al desenfoque de la sombra
+        data.forEach((p, i) => {
+            const x = margin + (i / (data.length - 1)) * chartWidth;// Evita división por cero
+            const y = margin + chartHeight - ((p - minY) / yRange) * chartHeight;// Escala y
+            if (i === 0) ctx.moveTo(x, y);// Mueve al primer punto
+            else ctx.lineTo(x, y);// Dibuja línea hasta el siguiente punto
+        });
+        ctx.stroke();// Dibuja la línea
+        ctx.globalAlpha = 1;// restaura opacidad
 
+        // Puntos
+        data.forEach((p, i) => {
+            const x = margin + (i / (data.length - 1)) * chartWidth;// Evita división por cero
+            const y = margin + chartHeight - ((p - minY) / yRange) * chartHeight;// Escala y
+            const color = colors[i] || '#66a3ff';
             ctx.beginPath();
-            ctx.arc(x, y, 6, 0, Math.PI * 2);// se refiere a dibujar un círculo
+            ctx.arc(x, y, 6, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 15;
             ctx.fill();
-
-            ctx.shadowBlur = 0; // se resetea el desenfoque de la sombra
+            ctx.shadowBlur = 0;
         });
 
-        ctx.strokeStyle = '#fcfcfc';// se refiere al color de la línea del gráfico
-        ctx.globalAlpha = 0.5; //se refiere a la opacidad de la línea
-        ctx.lineWidth = 2;  //se refiere al grosor de la línea
-        ctx.beginPath();// se refiere a iniciar un nuevo camino para dibujar la línea
-        data.forEach((point, index) => {
-            const x = margin + (index / (data.length - 1)) * chartWidth;
-            const y = margin + chartHeight - ((point - minY) / yRange) * chartHeight;
-            if (index === 0) {
-                ctx.moveTo(x, y);
-            } else {
-                ctx.lineTo(x, y);
-            }
-        });
-        ctx.stroke();
-        ctx.globalAlpha = 1; //se resetea la opacidad
-
+        // Líneas horizontales
         horizontalLines.forEach(line => {
             ctx.strokeStyle = line.color;
             ctx.setLineDash([5, 5]);
-            ctx.lineWidth = 2; // se refiere al grosor de la línea
+            ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(margin, line.y);
-            ctx.lineTo(canvas.width - margin, line.y);// se refiere a dibujar la línea horizontal
+            ctx.lineTo(canvas.width - margin, line.y);
             ctx.stroke();
         });
+        ctx.setLineDash([]);
     }
 
-    function addData(value, color = '#66a3ff') {// se refiere a añadir datos al gráfico
-        if (data.length >= 100) {
-            data.shift();
-            colors.shift();
-        }
-        let newValue = value;// se refiere al nuevo valor que se va a añadir al gráfico
-        if (data.length > 0) {
-            newValue += data[data.length - 1];// se refiere a añadir el nuevo valor al último valor del gráfico
-        }
-        data.push(newValue);
-        colors.push(color);// se refiere a añadir el color del nuevo valor al gráfico
+    function addData(v, color = '#66a3ff') {
+        if (data.length >= 100) { data.shift(); colors.shift(); }
+        let newVal = data.length > 0 ? v + data[data.length - 1] : v;
+        data.push(newVal);
+        colors.push(color);
+        drawChart();
+        addCandleAuto(v, color);
+    }
 
-        horizontalLines.forEach(line => {// se refiere a actualizar las líneas horizontales
-            line.y = margin + chartHeight - ((line.value - Math.min(...data)) / (Math.max(...data) - Math.min(...data))) * chartHeight;
-        });
-
+    function addHorizontalLine(color) {
+        if (data.length === 0) return;
+        const minY = Math.min(...data), maxY = Math.max(...data);
+        const yRange = maxY - minY || 1;
+        const value = data[data.length - 1];
+        const y = margin + chartHeight - ((value - minY) / yRange) * chartHeight;
+        horizontalLines.push({ value, y, color });
         drawChart();
     }
 
-    function addHorizontalLine(value, color) {
-        const y = margin + chartHeight - ((value - Math.min(...data)) / (Math.max(...data) - Math.min(...data))) * chartHeight;
-        horizontalLines.push({ value: value, y: y, color: color });
-        drawChart();
-    }
-
-    function clearLastLine() {// se refiere a eliminar la última línea horizontal del gráfico
+    function clearLastLine() {
         if (horizontalLines.length > 0) {
             horizontalLines.pop();
             drawChart();
         }
     }
 
-    function deleteLastData() {
-        if (data.length > 0) {
-            const lastData = data.pop();
-            colors.pop();
-            accumulatedSum -= lastData;
-            drawChart();
-        }
+    // ===================== GRAFICO 2 (VELAS) =====================
+    const candleCanvas = document.getElementById('candlestick-chart');
+    const candleCtx = candleCanvas.getContext('2d');
+    const candleMargin = 20, candleWidth = 9;// ancho de cada vela
+    let candles = [];// {open, close, high, low}
+
+    function drawCandlestickChart() {
+        candleCtx.clearRect(0, 0, candleCanvas.width, candleCanvas.height);
+        if (candles.length === 0) return;
+        const allPrices = candles.flatMap(c => [c.open,c.close,c.high,c.low]);// todos los precios
+        const minP = Math.min(...allPrices), maxP = Math.max(...allPrices), yRange = maxP - minP;
+        candles.forEach((c,i) => {
+            const x = candleMargin + i*(candleWidth+4);
+            const scaleY = p => candleMargin + (maxP - p)/yRange*(candleCanvas.height-2*candleMargin);// función para escalar y
+            const yH=scaleY(c.high), yL=scaleY(c.low), yO=scaleY(c.open), yC=scaleY(c.close);
+            const color = c.close>=c.open?'#00cc66':'#cc3333';
+            candleCtx.strokeStyle=color; candleCtx.beginPath();
+            candleCtx.moveTo(x+candleWidth/2,yH); candleCtx.lineTo(x+candleWidth/2,yL); candleCtx.stroke();// mecha
+            candleCtx.fillStyle=color;// cuerpo
+            candleCtx.fillRect(x,Math.min(yO,yC),candleWidth,Math.abs(yC-yO)||1);// evita cuerpo de 0px
+        });
     }
 
-    function getCurrentTime() {
-        const now = new Date();
-        now.setSeconds(now.getSeconds() - 10);
-        return now.toLocaleTimeString();
+    function addCandle(open, close, high, low) {// agrega una vela
+        candles.push({open,close,high,low});// agrega la vela
+        if(candles.length>60) candles.shift();// mantiene máximo 100 velas
+        drawCandlestickChart();
     }
 
-    document.getElementById('btn11').addEventListener('click', () => {
-        const now = new Date();
-        now.setSeconds(now.getSeconds() + 110);
-        const nextEntryTime = new Date(now);
-        document.getElementById('proxima-entrada2').textContent = nextEntryTime.toLocaleTimeString();
-    });
+    function addCandleAuto(v, color) {
+        let base = candles.length > 0 ? candles[candles.length - 1].close : 1;
+        let range = Math.abs(v);
+        if (color === '#ba1428') addCandle(base, base - range * 0.6, base + range * 0.3, base - range);
+        else if (color === '#8b0000') addCandle(base, base - range * 1.8, base + range * 1.0, base - range * 2.6);
+        else if (color === '#6ceb52') addCandle(base, base + range * 0.6, base + range * 0.3, base - range * 0.4);
+        else if (color === '#ed4ac7') addCandle(base, base + range * 1.8, base + range * 2.6, base - range * 0.8);
+        else if (color === '#ffd700') addCandle(base, base + range * 1.2, base + range * 2.0, base - range * 1.0);
+        else addCandle(base, base + range * 0.8, base + range * 1.4, base - range * 0.4);
+    }
+
+    // ===================== BOTONES =====================
+    document.getElementById('btn1').addEventListener('click', ()=>addData(-1,'#ba1428')); // roja
+    document.getElementById('btn13').addEventListener('click', ()=>addData(-1,'#8b0000')); // Roja grande
+    document.getElementById('btn2').addEventListener('click', ()=>addData(1,'#6ceb52')); // verde
+    document.getElementById('btn9').addEventListener('click', ()=>addData(1,'#ed4ac7')); // rosa
+    document.getElementById('btn10').addEventListener('click', ()=>addData(1,'#ffd700')); // dorada
+    document.getElementById('btn3').addEventListener('click', ()=>{data.pop();colors.pop();drawChart();candles.pop();drawCandlestickChart();});
+    document.getElementById('btn4').addEventListener('click', ()=>{data=[];colors=[];candles=[];horizontalLines=[];drawChart();drawCandlestickChart();});
+    document.getElementById('btn5').addEventListener('click', ()=>addHorizontalLine('#ff0000')); // resistencia
+    document.getElementById('btn6').addEventListener('click', ()=>addHorizontalLine('#00cc66')); // soporte
+    document.getElementById('btn7').addEventListener('click', clearLastLine); // borrar última línea
+    document.getElementById('btn12').addEventListener('click', ()=>addHorizontalLine('#ffff00')); // zona cero
 
     document.getElementById('btn8').addEventListener('click', () => {
         const now = new Date();
         now.setSeconds(now.getSeconds() + 110);
-        const nextEntryTime = new Date(now);
-        document.getElementById('proxima-entrada1').textContent = nextEntryTime.toLocaleTimeString();
+        document.getElementById('proxima-entrada1').textContent = now.toLocaleTimeString();
+    });
+    document.getElementById('btn11').addEventListener('click', () => {
+        const now = new Date();
+        now.setSeconds(now.getSeconds() + 110);
+        document.getElementById('proxima-entrada2').textContent = now.toLocaleTimeString();
     });
 
-    document.getElementById('btn1').addEventListener('click', () => addData(-1 ,'#ba1428'));// se refiere a añadir datos negativos al gráfico
-    document.getElementById('btn2').addEventListener('click', () => addData(1, '#6ceb52'));// se refiere a añadir datos positivos al gráfico
-    document.getElementById('btn3').addEventListener('click', deleteLastData);// se refiere a eliminar el último dato del gráfico
-    document.getElementById('btn4').addEventListener('click', () => {// se refiere a reiniciar el gráfico
-        data = [];
-        colors = [];
-        accumulatedSum = 0;
-        drawChart();
-    });
+    // Reloj en vivo
+    setInterval(()=>{document.getElementById('time').textContent=new Date().toLocaleTimeString();},1000);
 
-    document.getElementById('btn5').addEventListener('click', () => {
-        if (data.length > 0) {
-            addHorizontalLine(data[data.length - 1], '#FF0000');
-        }
-    });
-
-    document.getElementById('btn6').addEventListener('click', () => {
-        if (data.length > 0) {
-            addHorizontalLine(data[data.length - 1], '#00cc66');
-        }
-    });
-
-    document.getElementById('btn12').addEventListener('click', () => {
-        if (data.length > 0) {
-            addHorizontalLine(data[data.length - 1], '#FFFF00');
-        }
-    });
-
-    document.getElementById('btn7').addEventListener('click', clearLastLine);
-    document.getElementById('btn9').addEventListener('click', () => addData(1, '#ed4ac7'));// se refiere a añadir datos de un color específico al gráfico
-    document.getElementById('btn10').addEventListener('click', () => addData(1, '#ffd700'));// se refiere a añadir datos de otro color específico al gráfico
-
-    setInterval(() => {
-        document.getElementById('time').textContent = getCurrentTime();// se refiere a actualizar el tiempo actual en el gráfico
-    }, 1000);
-
-    drawChart();
+    drawChart(); 
+    drawCandlestickChart();
 });

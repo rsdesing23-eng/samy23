@@ -1,303 +1,205 @@
-/* Estilos generales */
+/* === 🎨 Estilo Neon Futurista === */
+
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0;/* Elimina márgenes por defecto */
-    padding: 0;/* Elimina márgenes y rellenos por defecto */
-    background-color: #1a1a30; /* Fondo azul oscuro */
-    color: #fff; /* Texto en color blanco */
+  font-family: 'Orbitron', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: radial-gradient(circle at top, #0b0c10, #000);
+  color: #e0e0ff;
+  overflow-x: hidden;
 }
 
+/* Contenedor principal */
 .container {
-    display: flex;/* Contenedor principal */
-    flex-direction: column;/* Dirección de la columna para apilar elementos */
-    align-items: center;/* Alineación centrada de los elementos */
-    justify-content: center;/* Justificación centrada de los elementos */
-    height: 100vh;/* Altura completa de la ventana */
-    padding: 10px;/* Espacio interno del contenedor */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  background: linear-gradient(180deg, rgba(0,0,30,0.9) 0%, rgba(0,0,0,0.95) 100%);
+  box-shadow: inset 0 0 30px rgba(0, 255, 255, 0.1);
 }
 
+/* Panel principal */
 .app {
-    background: #040c1f; /* Fondo azul más oscuro para el contenido */
-    padding: 10px;/* Espacio interno del contenido */
-    border-radius: 10px;/* Bordes redondeados */
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);/* Sombra para dar profundidad */
-    width: 100%;/* Ancho completo del contenedor */
-    max-width: 800px;/* Ancho máximo del contenedor */
-    margin-bottom: 10px;/* Margen inferior para separar del siguiente elemento */
+  background: rgba(10, 10, 25, 0.95);
+  padding: 15px;
+  border-radius: 16px;
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  width: 95%;
+  max-width: 900px;
+  backdrop-filter: blur(6px);
 }
 
+/* Gráfico */
 #chart-container {
-    width: 100%;/* Contenedor del gráfico */
-    margin-bottom: 20px;/* Margen inferior para separar del siguiente elemento */
+  width: 100%;
+  margin-bottom: 20px;
 }
 
 #chart {
-    width: 100%;/* Ancho completo del gráfico */
-    height: auto;/* Altura automática del gráfico */
-    border: none;/* Sin borde */
-    background-color: #080a0f; /* Fondo azul oscuro para el gráfico */
+  width: 100%;
+  height: 400px;
+  border-radius: 14px;
+  background: #02040a;
+  box-shadow: inset 0 0 30px rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.25);
 }
 
 #chart-name {
-    color: #dddae4; /* Texto en color blanco */
-    text-align: center;
-    margin-top: 6px;/* Margen superior para separar del gráfico */
+  color: #00ffff;
+  text-align: center;
+  margin-top: 8px;
+  text-shadow: 0 0 8px cyan;
 }
 
 #chart-name-highlight {
-    color: #e01919; /* Resaltado en color amarillo */
+  color: #47ca36;
+  text-shadow: 0 0 10px #0044ff;
 }
 
+/* Controles */
 .controls {
-    display: flex;/* Controles para los botones */
-    flex-direction: column;/* Dirección de la columna para apilar botones */
-    align-items: center;/* Alineación centrada de los botones */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
 }
 
 .time {
-    font-size: 12px;/* Tamaño de fuente del texto */
-    font-weight: bold;/* Negrita para el texto */
-    margin-bottom: 5px;/* Margen inferior para separar de los siguientes elementos */
-    color: #fff; /* Texto en color blanco */
+  font-size: 20px;
+  color: #00ff0d;
+  text-shadow: 0 0 8px #1900ff;
+  margin-bottom: 8px;
 }
 
+/* === Botones Neon === */
 .buttons {
-    display: flex;/* Contenedor de botones */
-    flex-wrap: wrap;/* Permite que los botones se ajusten en varias líneas */
-    justify-content: center;/* Justificación centrada de los botones */
-    margin-bottom: 5px;/* Margen inferior para separar de los siguientes elementos */
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
-.buttons button {/* Estilos para los botones */
-    margin: 1px;/* Margen entre los botones */
-    padding: 5px;/* Espacio interno del botón */
-    font-size: 11px;/* Tamaño de fuente del texto */
-    font-weight: bold;/* Negrita para el texto del botón */
-    border: none;
-    border-radius: 6px;/* Bordes redondeados */
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    color: #fff; /* Texto en color blanco */
+.buttons button {
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #fff;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  background: linear-gradient(90deg, #0ff, #09f);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+  transition: all 0.2s ease-in-out;
+}
+
+/* Hover efecto neón brillante */
+.buttons button:hover {
+  box-shadow: 0 0 25px #00ffff, 0 0 60px rgba(0,255,255,0.6);
+  transform: scale(1.05);
+}
+
+/* Colores específicos */
+.buttons button.add {
+  background: linear-gradient(90deg, #00ff80, #00ffaa);
+  box-shadow: 0 0 10px #00ffaa;
 }
 
 .buttons button.subtract {
-    background-color: #ff4d4d; /* Rojo */
-}
-
-.buttons button.add {
-    background-color: #4CAF50; /* Verde */
+  background: linear-gradient(90deg, #ff0040, #ff3385);
+  box-shadow: 0 0 10px #ff3385;
 }
 
 .buttons button.delete {
-    background-color: #ff9933; /* Naranja */
+  background: linear-gradient(90deg, #ffb300, #ff8800);
+  box-shadow: 0 0 10px #ff8800;
 }
 
 .buttons button.reset-chart {
-    background-color: #000; /* Negro */
-    color: #fff; /* Texto en color blanco */
+  background: linear-gradient(90deg, #333, #111);
+  color: #00ffff;
+  border: 1px solid #00ffff;
+  box-shadow: 0 0 8px #00ffff;
 }
 
 .buttons button.red-line {
-    background-color: #ff3333; /* Rojo */
+  background: linear-gradient(90deg, #ff0000, #ff4d4d);
+  box-shadow: 0 0 12px #ff4d4d;
 }
 
 .buttons button.green-line {
-    background-color: #00cc66; /* Verde */
-}
-
-.buttons button.clear-lines {
-    background-color: #666; /* Gris */
-}
-
-.buttons button.next-entry2 {
-    background-color: #1722c0; /* Azul */
+  background: linear-gradient(90deg, #00ff66, #00ffaa);
+  box-shadow: 0 0 12px #00ffaa;
 }
 
 .buttons button.yellow-line {
-    background-color: #ffd700; /* Amarillo dorado */
-    color: #fff; /* Texto en color blanco */
-}
-
-.buttons button.yellow-line:hover {
-    background-color: #e6c200; /* Amarillo dorado más oscuro al pasar el mouse */
+  background: linear-gradient(90deg, #ffff00, #ffcc00);
+  color: #111;
+  box-shadow: 0 0 12px #ffff00;
 }
 
 .buttons button.add-rosa {
-    background-color: #ff69b4; /* Rosa */
+  background: linear-gradient(90deg, #ff33cc, #ff66ff);
+  box-shadow: 0 0 12px #ff66ff;
 }
 
 .buttons button.add-dorado {
-    background-color: #ffd700; /* Dorado */
+  background: linear-gradient(90deg, #ffd700, #ffb400);
+  color: #222;
+  box-shadow: 0 0 12px #ffb400;
 }
 
-.input-group {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 5px;
-    width: 100%;
+/* === Inputs === */
+.input-group input {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #00ffff;
+  background-color: #0a0a12;
+  color: #0ff;
+  font-weight: bold;
+  text-align: center;
+  box-shadow: inset 0 0 8px rgba(0,255,255,0.4);
+  outline: none;
 }
 
-.input-group label {/* Etiqueta para el input */
-    margin-bottom: 3px;/* Espacio entre la etiqueta y el input */
-    font-size: 12px;/* Tamaño de fuente del texto */
+.input-group input:focus {
+  box-shadow: 0 0 12px #00ffff, inset 0 0 8px rgba(0,255,255,0.5);
 }
 
-.input-group input {/* Estilos para el input */
-    padding: 5px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    width: 80%;
-    text-align: center;
-    font-size: 12px;
-    background-color: #fff; /* Fondo blanco para el input */
-    color: #000; /* Texto en color negro */
-    margin-bottom: 3px;
-}
-
-.input-group button {
-    padding: 5px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 12px;
-    background-color: #4caf50; /* Verde */
-    color: #fff; /* Texto en color blanco */
-    transition: background-color 0.3s ease;
-    width: 80%;
-}
-
-.input-group button:hover {
-    background-color: #45a049; /* Verde más oscuro al pasar el mouse */
-}
-
-.info-group {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-around;
-    width: 100%;
-    margin-bottom: 5px;
-}
-
-.bet-info,
-.goal-info {
-    width: 48%;
-    text-align: center;
-}
-
+/* === Información === */
 .bet-info h2,
 .goal-info h2 {
-    color: #666; /* Texto gris oscuro */
-    margin-bottom: 3px;
-    font-size: 12px;
+  color: #00ff80;
+  text-shadow: 0 0 7px #0059ff;
 }
 
 .bet-info p,
 .goal-info p {
-    font-size: 12px;
-    margin: 0;
+  color: #fff;
+  text-shadow: 0 0 6px rgba(255,255,255,0.3);
 }
 
-.bet-buttons {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    margin-bottom: 5px;
+/* === Botones de apuesta === */
+.bet-buttons .win {
+  background: linear-gradient(90deg, #00ff99, #00cc66);
+  box-shadow: 0 0 15px #00ff99;
 }
 
-.bet-buttons .win,
 .bet-buttons .lose {
-    padding: 5px;
-    font-size: 12px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    width: 48%;
+  background: linear-gradient(90deg, #ff3366, #ff0033);
+  box-shadow: 0 0 15px #ff3366;
 }
 
-.win {
-    background-color: #4caf50; /* Verde */
-}
-
-.win:hover {
-    background-color: #358138; /* Verde más oscuro al pasar el mouse */
-}
-
-.lose {
-    background-color: #ff4d4d; /* Rojo */
-}
-
-.lose:hover {
-    background-color: #e60000; /* Rojo más oscuro al pasar el mouse */
-}
-
-.reset {
-    background-color: #ff9800; /* Naranja */
-    padding: 5px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 12px;
-    transition: background-color 0.3s ease;
-    width: 80%;
-}
-
-.reset:hover {
-    background-color: #e68a00; /* Naranja más oscuro al pasar el mouse */
-}
-
-.entry-times {
-    display: flex;
-    justify-content: space-around;
-    width: 100%;/* Contenedor para los tiempos de entrada */
-    margin-bottom: 10px;
-}
-
-.entry-time {
-    font-size: 12px;/* Tamaño de fuente del texto */
-    color: #fff; /* Texto en color blanco */
-}
-
-@media screen and (max-width: 600px) {/* Estilos para dispositivos móviles */
-    .container {
-        padding: 20px;/* Espacio interno reducido */
-    }
-
-    .buttons {
-        flex-direction: column;/* Dirección de la columna para apilar botones */
-        align-items: center;/* Alineación centrada de los botones */
-    }
-
-    .buttons button {
-        width: 100%;/* Ancho completo para botones en dispositivos móviles */
-        margin: 2px 0;/* Margen vertical entre botones */
-    }
-
-    .input-group input,
-    .input-group button {
-        width: 100%;/* Ancho completo para input y botón en dispositivos móviles */
-        margin-bottom: 5px;/* Margen inferior para separar de los siguientes elementos */
-    }
-
-    .info-group {
-        flex-direction: column;/* Dirección de la columna para apilar información */
-        align-items: center;/* Alineación centrada de la información */
-    }
-
-    .info-group div {
-        width: 100%;/* Ancho completo para los elementos de información */
-        margin-bottom: 5px;/* Margen inferior para separar de los siguientes elementos */
-    }
-
-    .bet-buttons {
-        flex-direction: column;/* Dirección de la columna para apilar botones de apuesta */
-    }
-
-    .bet-buttons .win,
-    .bet-buttons .lose {
-        width: 100%;/* Ancho completo para botones de apuesta en dispositivos móviles */
-        margin-bottom: 5px;/* Margen inferior para separar de los siguientes elementos */
-    }
+/* === Responsive === */
+@media (max-width: 600px) {
+  .buttons {
+    flex-direction: column;
+  }
+  .buttons button {
+    width: 100%;
+  }
 }
