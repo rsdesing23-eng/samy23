@@ -2,64 +2,129 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Analizador de tendencias SAMY23</title>
+  <title>Masaniello Conectado</title>
   <link rel="stylesheet" href="styles.css" />
-  <script src="script.js" defer></script>
 </head>
 <body>
-  <div class="container">
-    <div class="app">
-      <div id="chart-container">
-        <canvas id="chart" width="1200" height="400"></canvas>
-        <canvas id="candlestick-chart" width="1200" height="400"></canvas>
-        <div id="chart-name">RICARDO<span id="chart-name-highlight">DAVID23</span></div>
-      </div>
-      <div class="controls">
-        <div class="buttons">
-          <button id="btn1" class="subtract">-2</button>
-          <button id="btn13" class="subtract">=1</button>
-          <button id="btn2" class="add">+2</button>
-          <button id="btn10" class="add-dorado">+4</button>
-          <button id="btn9" class="add-rosa">>=10</button>
-          <button id="btn3" class="delete">Atras</button>
-          <button id="btn4" class="reset-chart">Reiniciar</button>
-          <button id="btn5" class="red-line">Resistencia</button>
-          <button id="btn6" class="green-line">Soporte</button>
-          <button id="btn7" class="clear-lines">Borrar</button>
-          <button id="btn8" class="next-entry2">Entrada 1</button>
-          <button id="btn11" class="next-entry2">Entrada 2</button>
-          <button id="btn12" class="yellow-line">Zona Cero</button>
-         
 
+  <div id="contenedor-principal">
+
+    <!-- PANEL MASANIELLO -->
+    <div id="panel-masaniello">
+      <h2>RICARDO DAVID23</h2>
+
+      <label>Capital inicial:</label>
+      <input id="capital" type="number" placeholder="0.00" />
+      <button id="generate-bet">Generar Apuesta</button>
+      <div class="mini-display"><span>Apuesta actual:</span> <strong id="bet-amount">-</strong></div>
+      <div class="mini-display"><span>Meta de sesión:</span> <strong id="session-goal">-</strong></div>
+      <button id="win-bet" class="green">✅ Win</button>
+      <button id="lose-bet" class="red">❌ Lose</button>
+      <button id="reset" class="yellow">Reset</button>
+    </div>
+
+    <!-- GRÁFICOS -->
+    <div id="charts-section">
+      <div class="chart-title">Gráfico de Secuencia</div>
+      <div class="chart-wrapper">
+        <canvas id="chart" width="1200" height="400"></canvas>
+      </div>
+
+      <!-- Mensaje central -->
+      <div id="pattern-center-message">🟢 Esperando detección de patrón...</div>
+
+      <div class="chart-title">Gráfico de Velas</div>
+      <div class="chart-wrapper">
+        <canvas id="candlestick-chart" width="1200" height="350"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PANEL DE CONTROLES -->
+  <div id="panel-botones">
+    <h3>Controles</h3>
+
+    <div class="fila-botones">
+      <button id="btn1" class="rojo1">-2</button>
+      <button id="btn13" class="rojo2">→=1</button>
+      <button id="btn2" class="verde1">+2 V</button>
+      <button id="btn9" class="rosa1">+10 Rosa</button>
+      <button id="btn10" class="oro1">+4 Dorado</button>
+      <button id="btn3" class="gris1">⟲ Undo</button>
+      <button id="btn4" class="gris2">⟲ Reset</button>
+      <button id="btn5" class="hr rojo">RESISTENCIA</button>
+      <button id="btn6" class="hr verde">SOPORTE</button>
+      <button id="btn12" class="hr amarillo">ZONA CERO</button>
+      <button id="btn7" class="hr borrar">Borrar</button>
+    </div>
+
+    <!-- Entradas + Reloj -->
+    <div class="panel-tiempo">
+      <div class="entrada">
+        <button id="btn8" class="blue">Entrada A</button>
+        <strong id="proxima-entrada1">--:--:--</strong>
+      </div>
+
+      <div class="entrada">
+        <button id="btn11" class="blue">Entrada B</button>2
+        <strong id="proxima-entrada2">--:--:--</strong>
+      </div>
+
+      <div class="reloj-control" id="reloj-dinamico">
+        <div>
+          <span>Hora actual:</span>
+          <strong id="time">--:--:--</strong>
         </div>
-        <div class="entry-times">
-          <div id="time" class="time">11:22:56</div>
-          <div id="proxima-entrada1" class="time"></div>
-          <div id="proxima-entrada2" class="time"></div>
+        <div id="trend-counter">
+          📈 Tendencia: <strong id="trend-status">Estable</strong><br>
+          <span id="trend-details">Altas: 0 | Bajas: 0</span>
         </div>
-        <div class="input-group">
-          <label for="capital">Dinero a Invertir:</label>
-          <input type="number" id="capital" min="0" step="0.01" />
-          <button id="generate-bet">Generar Primera Apuesta</button>
-        </div>
-        <div class="info-group">
-          <div class="bet-info">
-            <h2>Apuesta Sugerida</h2>
-            <p id="bet-amount">-</p>
-          </div>
-          <div class="goal-info">
-            <h2>Objetivo de la Sesión</h2>
-            <p id="session-goal">-</p>
-          </div>
-        </div>
-        <div class="bet-buttons">
-          <button id="win-bet" class="win">Ganada</button>
-          <button id="lose-bet" class="lose">Perdida</button>
-        </div>
-        <button id="reset" class="reset">Reiniciar</button>
       </div>
     </div>
   </div>
+
+  <!-- PANEL MEMORIA IA DEL MERCADO -->
+  <div id="panel-memoria-ia">
+    <h3>🧠 Memoria IA del Mercado</h3>
+
+    <div class="memoria-resumen">
+      <div class="memoria-stat"><span>Velas en memoria:</span> <strong id="mem-candle-count">0</strong></div>
+      <div class="memoria-stat"><span>Patrones registrados:</span> <strong id="mem-pattern-count">0</strong></div>
+      <div class="memoria-stat"><span>Prob. Alcista global:</span> <strong id="mem-prob-up" class="prob-up">--%</strong></div>
+      <div class="memoria-stat"><span>Prob. Bajista global:</span> <strong id="mem-prob-down" class="prob-down">--%</strong></div>
+    </div>
+
+    <div class="memoria-tabla-wrapper">
+      <table id="tabla-patrones">
+        <thead>
+          <tr><th>Patrón</th><th>Veces</th><th>% Alcista</th><th>% Bajista</th></tr>
+        </thead>
+        <tbody id="tabla-patrones-body"></tbody>
+      </table>
+    </div>
+
+    <div class="memoria-figuras">
+      <h4>🔁 Secuencias de 3 colores repetidas</h4>
+      <ul id="lista-figuras-repetidas"></ul>
+    </div>
+
+    <div class="memoria-figuras">
+      <h4>🔁 Secuencias de 5 colores repetidas</h4>
+      <ul id="lista-figuras-repetidas-5"></ul>
+    </div>
+
+    <p class="memoria-disclaimer">Estadísticas basadas en patrones históricos detectados en esta memoria. No garantizan resultados futuros.</p>
+
+    <button id="btn-reset-memoria" class="gris2">🗑️ Borrar Memoria IA</button>
+  </div>
+
+  <!-- Mensajes flotantes -->
+  <div id="signal-message">Señales…</div>
+  <div id="signal-message-bottom"></div>
+  <div id="pattern-summary"></div>
+  <div id="aviso-figura-repetida"></div>
+
+  <script src="script.js"></script>
 </body>
 </html>

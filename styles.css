@@ -1,205 +1,849 @@
-/* === 🎨 Estilo Neon Futurista === */
+/* ================================
+   STYLES.CSS - RESPONSIVE OPTIMIZED GRID
+================================ */
 
+/* GENERAL */
 body {
-  font-family: 'Orbitron', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  margin: 0;
-  padding: 0;
-  background: radial-gradient(circle at top, #0b0c10, #000);
-  color: #e0e0ff;
-  overflow-x: hidden;
+    margin: 0;/* Elimina márgenes predeterminados */
+    padding: 0;
+    background: #000;
+    color: #fff;
+    font-family: Orbitron, sans-serif;/* Fuente futurista */
+    overflow-x: hidden;
 }
 
-/* Contenedor principal */
-.container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 20px;
-  background: linear-gradient(180deg, rgba(0,0,30,0.9) 0%, rgba(0,0,0,0.95) 100%);
-  box-shadow: inset 0 0 30px rgba(0, 255, 255, 0.1);
+#contenedor-principal {
+    width: 100%;
+    max-width: 1250px;
+    margin: 15px auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-/* Panel principal */
-.app {
-  background: rgba(10, 10, 25, 0.95);
-  padding: 15px;
-  border-radius: 16px;
-  box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
-  border: 1px solid rgba(0, 255, 255, 0.3);
-  width: 95%;
-  max-width: 900px;
-  backdrop-filter: blur(6px);
+/* PANEL MASANIELLO */
+#panel-masaniello {/* Formulario de control principal */
+    background: #0a0a0a;
+    border: 1px solid #00ffff55;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 0 12px #00ffff33;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 10px;
 }
 
-/* Gráfico */
-#chart-container {
-  width: 100%;
-  margin-bottom: 20px;
+#panel-masaniello input,
+#panel-masaniello button {/* Estilo de inputs y botones */
+    flex: 1 1 140px;
+    min-width: 80px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: none;
+    background: #111;
+    color: rgb(93, 211, 38);
+    font-family: Orbitron;
 }
 
-#chart {
-  width: 100%;
-  height: 400px;
-  border-radius: 14px;
-  background: #02040a;
-  box-shadow: inset 0 0 30px rgba(0, 255, 255, 0.1);
-  border: 1px solid rgba(0, 255, 255, 0.25);
+#panel-masaniello button {/* Botones específicos */
+    background: #222;
+    color: #fff;
+    border: 1px solid #0ff5;
+    cursor: pointer;
+    transition: transform 0.1s;
 }
 
-#chart-name {
-  color: #00ffff;
-  text-align: center;
+#panel-masaniello button:hover {
+    transform: scale(1.08);
+}
+
+/* MINI DISPLAY */
+.mini-display {
+    margin-top: 6px;
+    background: #111;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #0dc525;
+    width: fit-content;
+}
+
+/* CHARTS */
+#charts-section {/* Sección de gráficos */
+    margin-top: 20px;
+    width: 100%;
+}
+
+.chart-wrapper {/* Contenedor de cada gráfico */
+    width: 100%;
+    max-width: 1200px;
+    height: auto;
+    margin-bottom: 25px;
+    border-radius: 10px;
+    padding: 10px;
+    background: #080808;
+    border: 1px solid #00cccc55;
+    box-shadow: 0 0 12px #00cccc44;
+}
+
+canvas {/* Gráficos canvas */
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    display: block;
+}
+
+/* PANEL BOTONES */
+#panel-botones {/* Contenedor de botones */
+    margin: 0 auto;
+    margin-top: 20px;/*   Separación superior */
+    width: 100%;
+    max-width: 1250px;/*   Ancho máximo */
+    padding: 15px;/*   Espaciado interno */
+    background: #0a0a0a;
+    border: 1px solid #00ffff33;
+    border-radius: 10px;  
+    box-shadow: 0 0 12px #00ffff33; 
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+}
+
+/* BOTONES DE COLORES */
+/* BOTONES CON EFECTO SUTIL */
+#panel-botones button,/*    Botones en panel de botones */
+#panel-masaniello button {
+    border-radius: 6px;
+    font-family: Orbitron, sans-serif;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 3px 6px rgba(0,255,255,0.1);
+}
+
+/* Hover: leve escalado y brillo */
+#panel-botones button:hover,
+#panel-masaniello button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 12px rgba(0,255,255,0.25);
+}
+
+/* Active: pulsación al hacer click */
+#panel-botones button:active,
+#panel-masaniello button:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 5px rgba(0,255,255,0.15);
+}
+
+/* Colores específicos (igual que tus botones actuales) */
+button.green { background:#006b2c; border-color:#00ff80; }
+button.red { background:#8b0000; border-color:#ff5050; }
+button.yellow { background:#756600; border-color:#ffe600; }
+.rojo1  { background:#ba1428; border-color:#ff3b5c; } 
+.rojo2  { background:#8b0000; border-color:#ff5050; } 
+.verde1 { background:#6ceb52; border-color:#00ff80; } 
+.rosa1  { background:#ed4ac7; border-color:#ff70d1; } 
+.oro1   { background:#ffd700; color:#000; border-color:#fff200; }
+.gris1  { background:#333; border-color:#555; } 
+.gris2  { background:#555; border-color:#888; }
+.blue   { background:#0044aa; border:1px solid #00aaff; }
+
+
+/* HR COLORES */
+.hr { padding:6px 10px; } 
+.hr.rojo { background:#8b0000; } 
+.hr.verde { background:#006b2c; } 
+.hr.amarillo { background:#a08d00; } 
+.hr.borrar { background:#333; }
+
+/* SEÑALES */
+#signal-message { z-index: 5; font-weight: bold; } 
+#signal-message-bottom { z-index: 5; } 
+#pattern-summary { z-index: 5; max-width: 420px; line-height: 1.3; }
+
+/* ================================
+   RESPONSIVE GENERAL
+================================= */
+
+/* Canvas y contenedor */
+@media (max-width: 1350px) {
+    canvas { width: 100% !important; max-width: 100% !important; }
+    #contenedor-principal { max-width: 95%; }
+}
+
+/* Pantallas medianas */
+@media (max-width: 1300px) {
+    #contenedor-principal { flex-direction: column; align-items: center; }
+    #panel-masaniello { width: 90%; margin-bottom: 20px; }
+    #charts-section { width: 95%; }
+}
+
+/* Panel Masaniello más pequeño */
+@media (max-width: 950px) {
+    #panel-masaniello { width: 80%; font-size: 14px; }
+    #panel-masaniello input { width: 100%; }
+}
+
+/* Gráficos responsive */
+@media (max-width: 850px) { .chart-wrapper { padding: 10px; } }
+
+/* Texto de señales más pequeño */
+@media (max-width: 750px) {
+    #signal-message { font-size: 13px; padding: 6px 8px; right: 10px; }
+    #pattern-summary { font-size: 12px; left: 10px; }
+}
+
+/* Adaptación móvil */
+@media (max-width: 600px) {
+    #panel-botones {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+    #panel-botones button,
+    #panel-masaniello input,
+    #panel-masaniello button {
+        flex: 1 1 100%;
+        max-width: 100%;
+        font-size: 12px;
+        padding: 6px 8px;
+    }
+    #panel-masaniello { width: 95%; padding: 10px; }
+    #panel-masaniello h2 { font-size: 18px; }
+}
+
+/* Adaptación muy pequeña para móviles */
+@media (max-width: 400px) {
+    #panel-botones { grid-template-columns: 1fr; }
+}
+.reloj-control {
   margin-top: 8px;
-  text-shadow: 0 0 8px cyan;
+  text-align: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 20px; /* 🔹 aumenta tamaño general */
+  color: #00ffff;
+  background-color: rgba(0, 0, 0, 0.65);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+  border-radius: 8px;/* 🔹 bordes redondeados */
+  padding: 10px 14px;/* 🔹 más espacio interno */
+  width: fit-content;/* 🔹 ancho ajustado al contenido */
+  margin-left: auto;/* 🔹 centra horizontalmente */
+  margin-right: auto;/* 🔹 centra horizontalmente */
+  letter-spacing: 2px; /* 🔹 separa dígitos para mejor lectura */
+  
+}
+#time {
+  font-size: 32px; /* 🔹 cambia tamaño del reloj */
+  color: #33dd2d;
+  text-shadow: 0 0 8px rgb(71, 158, 31); /* 🔹 efecto brillante */
+  font-weight: bold;
+}
+/* --- Botones de Entradas --- */
+#btn8, #btn11 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 18px;           /* 🔹 más grandes */
+  padding: 14px 24px;        /* 🔹 más altos y anchos */
+  border-radius: 10px;
+  background: linear-gradient(180deg, #d17c1b, #c20d3a);
+  color: white;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
+  transition: all 0.3s ease;
 }
 
-#chart-name-highlight {
-  color: #47ca36;
-  text-shadow: 0 0 10px #0044ff;
+/* Efecto hover */
+#btn8:hover, #btn11:hover {
+  transform: scale(1.08);
+  background: linear-gradient(180deg, #ec0725, #c0282f);
+  box-shadow: 0 0 25px rgb(138, 13, 23);
 }
 
-/* Controles */
-.controls {
+/* --- Hora de próxima entrada --- */
+#proxima-entrada1, #proxima-entrada2 {
+  font-size: 20px;
+  color: #47a806;
+  text-shadow: 0 0 10px #26d43d;
+  margin-left: 10px;
+}
+/* --- Posición de las señales --- */
+#signal-message {
+  position: fixed;
+  top: 12px;
+  right: 20px;
+  max-width: 420px;
+  background: rgba(0,0,0,0.65);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 16px;
+  z-index: 999;
+  pointer-events: none;
+}
+
+#pattern-center-message {
+  position: relative;
+  text-align: center;
+  font-size: 18px;
+  margin: 10px 0;
+  color: #00ffff;
+  text-shadow: 0 0 12px #00ffff;
+  font-weight: bold;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 10px rgba(0,255,255,0.3);
+}
+body {
+  background: radial-gradient(circle at 50% 20%, #001a1a 0%, #000 100%);
+}
+
+.chart-wrapper {
+  background: linear-gradient(180deg, #080808, #020202);
+}
+
+canvas {
+  border-radius: 8px;
+  box-shadow: 0 0 12px rgba(0,255,255,0.25);
+}
+/* ===== MEJORA VISUAL DE MENSAJES ===== */
+#pattern-center-message {
+  position: relative;
+  text-align: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 18px;
+  color: #00ffff;
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: 0 0 15px rgba(0,255,255,0.6);
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin: 12px auto;
+  width: 80%;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  opacity: 0;
+  transform: translateY(10px);
+  z-index: 10;
+}
+
+#pattern-center-message.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Mensajes generales de señal */
+#signal-message {
+  position: fixed;
+  top: 15px;
+  right: 20px;
+  z-index: 1000;
+  pointer-events: none;
+  max-width: 420px;
+  transition: opacity 0.6s ease;
+}
+
+/* Fondo del sitio más suave */
+body {
+  background: radial-gradient(circle at 50% 20%, #001a1a 0%, #000 100%);
+}
+
+/* Canvas con sombras */
+canvas {
+  border-radius: 8px;
+  box-shadow: 0 0 12px rgba(0,255,255,0.2);
+}
+/* --- Parpadeo de alerta de entrada --- */
+.blink-alert {
+  animation: blinkBox 0.6s infinite alternate;
+}
+
+@keyframes blinkBox {
+  0% {
+    background-color: rgba(0, 255, 255, 0.15);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+  }
+  100% {
+    background-color: rgba(255, 255, 0, 0.3);
+    box-shadow: 0 0 20px rgba(255, 255, 0, 0.9);
+  }
+}
+#pattern-center-message.alerta {
+  color: #ffff66 !important;
+  text-shadow: 0 0 20px #ffff66;
+  box-shadow: 0 0 25px rgba(255, 255, 0, 0.8);
+}
+/* ===== Contador de tendencia general ===== */
+#trend-counter {
+  margin-top: 8px;
+  text-align: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px;
+  color: #00ffff;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+  padding: 6px 10px;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+#trend-status {
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 0 0 8px #00ffff;
+  transition: all 0.4s ease;
+}
+
+#trend-details {
+  font-size: 12px;
+  color: #aaa;
+}
+/* ================= PANEL DE CONTROLES ================= */
+#panel-botones {
+  background: rgba(15, 15, 15, 0.85);
+  border-radius: 10px;
+  padding: 15px;
+  width: 95%;
+  max-width: 1200px;
+  margin: 20px auto;
+  box-shadow: 0 0 20px rgba(0,255,255,0.3);
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 10px;
 }
 
-.time {
-  font-size: 20px;
-  color: #00ff0d;
-  text-shadow: 0 0 8px #1900ff;
-  margin-bottom: 8px;
+#panel-botones h3 {
+  font-family: Orbitron, sans-serif;
+  color: cyan;
+  margin-bottom: 10px;
+  text-align: center;
 }
 
-/* === Botones Neon === */
-.buttons {
+.fila-botones {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 6px;
+  margin-bottom: 15px;
 }
 
-.buttons button {
-  padding: 8px 14px;
-  font-size: 14px;
-  font-weight: bold;
-  color: #fff;
-  border: 2px solid transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  background: linear-gradient(90deg, #0ff, #09f);
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
-  transition: all 0.2s ease-in-out;
+/* === Zona de Entradas y Reloj === */
+.panel-tiempo {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  align-items: center;
+  border-top: 1px solid rgba(0,255,255,0.3);
+  padding-top: 10px;
 }
 
-/* Hover efecto neón brillante */
-.buttons button:hover {
-  box-shadow: 0 0 25px #00ffff, 0 0 60px rgba(0,255,255,0.6);
-  transform: scale(1.05);
+.panel-tiempo .entrada {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-/* Colores específicos */
-.buttons button.add {
-  background: linear-gradient(90deg, #00ff80, #00ffaa);
-  box-shadow: 0 0 10px #00ffaa;
-}
-
-.buttons button.subtract {
-  background: linear-gradient(90deg, #ff0040, #ff3385);
-  box-shadow: 0 0 10px #ff3385;
-}
-
-.buttons button.delete {
-  background: linear-gradient(90deg, #ffb300, #ff8800);
-  box-shadow: 0 0 10px #ff8800;
-}
-
-.buttons button.reset-chart {
-  background: linear-gradient(90deg, #333, #111);
-  color: #00ffff;
-  border: 1px solid #00ffff;
-  box-shadow: 0 0 8px #00ffff;
-}
-
-.buttons button.red-line {
-  background: linear-gradient(90deg, #ff0000, #ff4d4d);
-  box-shadow: 0 0 12px #ff4d4d;
-}
-
-.buttons button.green-line {
-  background: linear-gradient(90deg, #00ff66, #00ffaa);
-  box-shadow: 0 0 12px #00ffaa;
-}
-
-.buttons button.yellow-line {
-  background: linear-gradient(90deg, #ffff00, #ffcc00);
-  color: #111;
-  box-shadow: 0 0 12px #ffff00;
-}
-
-.buttons button.add-rosa {
-  background: linear-gradient(90deg, #ff33cc, #ff66ff);
-  box-shadow: 0 0 12px #ff66ff;
-}
-
-.buttons button.add-dorado {
-  background: linear-gradient(90deg, #ffd700, #ffb400);
-  color: #222;
-  box-shadow: 0 0 12px #ffb400;
-}
-
-/* === Inputs === */
-.input-group input {
-  padding: 8px;
+.panel-tiempo .entrada button {
+  font-size: 15px;
+  padding: 6px 10px;
   border-radius: 6px;
-  border: 1px solid #00ffff;
-  background-color: #0a0a12;
-  color: #0ff;
-  font-weight: bold;
+}
+
+.panel-tiempo strong {
+  font-family: 'Orbitron', sans-serif;
+  color: white;
+  min-width: 70px;
   text-align: center;
-  box-shadow: inset 0 0 8px rgba(0,255,255,0.4);
-  outline: none;
 }
 
-.input-group input:focus {
-  box-shadow: 0 0 12px #00ffff, inset 0 0 8px rgba(0,255,255,0.5);
+.panel-tiempo .reloj {
+  font-family: 'Orbitron', sans-serif;
+  color: #00ffff;
+  font-size: 22px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 6px 12px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,255,255,0.4);
 }
 
-/* === Información === */
-.bet-info h2,
-.goal-info h2 {
-  color: #00ff80;
-  text-shadow: 0 0 7px #0059ff;
-}
+/* === Responsivo === */
+@media (max-width: 768px) {
+  #panel-botones {
+    width: 98%;
+    padding: 10px;
+  }
 
-.bet-info p,
-.goal-info p {
-  color: #fff;
-  text-shadow: 0 0 6px rgba(255,255,255,0.3);
-}
-
-/* === Botones de apuesta === */
-.bet-buttons .win {
-  background: linear-gradient(90deg, #00ff99, #00cc66);
-  box-shadow: 0 0 15px #00ff99;
-}
-
-.bet-buttons .lose {
-  background: linear-gradient(90deg, #ff3366, #ff0033);
-  box-shadow: 0 0 15px #ff3366;
-}
-
-/* === Responsive === */
-@media (max-width: 600px) {
-  .buttons {
+  .panel-tiempo {
     flex-direction: column;
+    align-items: center;
   }
-  .buttons button {
-    width: 100%;
+
+  .panel-tiempo .reloj {
+    font-size: 20px;
+    margin-top: 8px;
   }
+
+  .fila-botones {
+    gap: 4px;
+  }
+}
+/* ==== Reloj con color dinámico ==== */
+.panel-tiempo .reloj {
+  font-family: 'Orbitron', sans-serif;
+  color: #00ffff;
+  font-size: 22px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 6px 12px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,255,255,0.4);
+  transition: background 0.5s, box-shadow 0.5s, color 0.5s;
+}
+
+/* Tendencia: soporta .reloj y .reloj-control */
+.reloj.tendencia-alcista,
+.reloj-control.tendencia-alcista {
+  background: rgba(0, 255, 80, 0.12);
+  color: #00ff80;
+  box-shadow: 0 0 15px rgba(0,255,80,0.7);
+}
+
+.reloj.tendencia-bajista,
+.reloj-control.tendencia-bajista {
+  background: rgba(255, 40, 40, 0.12);
+  color: #ff5050;
+  box-shadow: 0 0 15px rgba(255,40,40,0.7);
+}
+
+.reloj.tendencia-estable,
+.reloj-control.tendencia-estable {
+  background: rgba(50, 100, 255, 0.12);
+  color: #80c0ff;
+  box-shadow: 0 0 15px rgba(50,100,255,0.5);
+}
+#reloj-dinamico {
+  transition: background 0.5s ease, box-shadow 0.5s ease, color 0.5s ease;
+}
+
+.reloj-control.tendencia-alcista {
+  box-shadow: 0 0 20px #00ff66;
+  color: #00ff66;
+}
+
+.reloj-control.tendencia-bajista {
+  box-shadow: 0 0 20px #ff3333;
+  color: #ff3333;
+}
+
+.reloj-control.tendencia-estable {
+  box-shadow: 0 0 15px #ffff66;
+  color: #ffff66;
+}
+
+/* ================================
+   PANEL MEMORIA IA DEL MERCADO
+================================ */
+#panel-memoria-ia {
+  margin: 20px auto;
+  width: 95%;
+  max-width: 1200px;
+  background: #0a0a0a;
+  border: 1px solid #00ffff55;
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 0 16px #00ffff33;
+  font-family: 'Orbitron', sans-serif;
+}
+
+#panel-memoria-ia h3 {
+  text-align: center;
+  color: #00ffff;
+  text-shadow: 0 0 10px #00ffff;
+  margin: 0 0 12px 0;
+}
+
+#panel-memoria-ia h4 {
+  color: #ffff66;
+  font-size: 14px;
+  margin: 14px 0 8px 0;
+  text-align: center;
+}
+
+.memoria-resumen {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.memoria-stat {
+  background: #111;
+  border: 1px solid #0ff5;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  min-width: 150px;
+  text-align: center;
+}
+
+.memoria-stat span { color: #aaa; display: block; font-size: 11px; margin-bottom: 4px; }
+.memoria-stat strong { font-size: 16px; }
+
+.prob-up { color: #00ff80; text-shadow: 0 0 8px #00ff80; }
+.prob-down { color: #ff5050; text-shadow: 0 0 8px #ff5050; }
+
+.memoria-tabla-wrapper {
+  overflow-x: auto;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid #00cccc33;
+  border-radius: 8px;
+}
+
+#tabla-patrones {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+#tabla-patrones thead th {
+  background: #111;
+  color: #00ffff;
+  position: sticky;
+  top: 0;
+  padding: 8px 6px;
+  border-bottom: 1px solid #00ffff55;
+  text-align: left;
+}
+
+#tabla-patrones tbody td {
+  padding: 6px;
+  border-bottom: 1px solid #1a1a1a;
+  color: #ddd;
+}
+
+#tabla-patrones tbody tr:hover { background: rgba(0,255,255,0.06); }
+
+.memoria-figuras ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.memoria-figuras li {
+  background: #111;
+  border: 1px solid #0ff5;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.figura-firma { color: #00ffff; }
+.figura-secuencia { display: inline-flex; align-items: center; gap: 4px; }
+.figura-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 1px solid rgba(255,255,255,0.3);
+  box-shadow: 0 0 6px rgba(255,255,255,0.25);
+}
+.figura-dot-na {
+  width: auto;
+  height: auto;
+  border-radius: 4px;
+  background: #333;
+  color: #aaa;
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 4px;
+  border: 1px solid #555;
+}
+.figura-veces { color: #ffd700; font-weight: bold; }
+.figura-vacia { color: #777; font-style: italic; }
+
+.memoria-disclaimer {
+  font-size: 11px;
+  color: #777;
+  text-align: center;
+  margin: 12px 0 4px 0;
+  font-family: sans-serif;
+}
+
+#btn-reset-memoria {
+  display: block;
+  margin: 10px auto 0;
+  background: #555;
+  border: 1px solid #888;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Orbitron', sans-serif;
+}
+
+#btn-reset-memoria:hover { transform: scale(1.05); }
+
+@media (max-width: 600px) {
+  .memoria-stat { min-width: 120px; font-size: 12px; }
+  #tabla-patrones { font-size: 11px; }
+}
+
+/* ================================
+   AVISO DE FIGURA REPETIDA (COLOR)
+================================ */
+#aviso-figura-repetida {
+  position: fixed;
+  top: 70px;
+  right: 20px;
+  max-width: 380px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: bold;
+  font-size: 14px;
+  line-height: 1.3;
+  z-index: 998;
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity 0.4s ease, transform 0.4s ease, background 0.4s ease, box-shadow 0.4s ease;
+  pointer-events: none;
+  background: rgba(0,0,0,0.7);
+}
+
+#aviso-figura-repetida.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+@media (max-width: 750px) {
+  #aviso-figura-repetida {
+    top: auto;
+    bottom: 70px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+    font-size: 12px;
+  }
+}
+
+/* ================================
+   PANEL INDICADORES AVANZADOS
+================================ */
+#panel-indicadores {
+  margin: 20px auto;
+  width: 95%;
+  max-width: 1200px;
+  background: #0a0a0a;
+  border: 1px solid #00ffff55;
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 0 16px #00ffff33;
+  font-family: 'Orbitron', sans-serif;
+}
+
+#panel-indicadores h3 {
+  text-align: center;
+  color: #00ffff;
+  text-shadow: 0 0 10px #00ffff;
+  margin: 0 0 14px 0;
+}
+
+.ind-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.ind-card {
+  background: #111;
+  border: 1px solid #0ff3;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.ind-card.ind-wide {
+  grid-column: span 2;
+}
+
+.ind-label {
+  font-size: 10px;
+  color: #777;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ind-valor {
+  font-size: 22px;
+  color: #fff;
+  line-height: 1.1;
+}
+
+.ind-sub {
+  font-size: 11px;
+  color: #999;
+  font-family: sans-serif;
+}
+
+/* Colores de estado */
+.ind-card.ind-up {
+  border-color: #00ff8066;
+  box-shadow: 0 0 10px #00ff8022;
+}
+.ind-card.ind-up .ind-valor { color: #00ff80; }
+
+.ind-card.ind-down {
+  border-color: #ff505066;
+  box-shadow: 0 0 10px #ff505022;
+}
+.ind-card.ind-down .ind-valor { color: #ff5050; }
+
+.ind-card.ind-warn {
+  border-color: #ffd70066;
+  box-shadow: 0 0 8px #ffd70020;
+}
+.ind-card.ind-warn .ind-valor { color: #ffd700; }
+
+/* Barra de score */
+.score-bar-wrap {
+  background: #222;
+  border-radius: 4px;
+  height: 6px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+.score-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease, background 0.4s ease;
+  width: 0%;
+}
+
+/* Fila de ventanas */
+.ventana-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: #aaa;
+  margin-top: 4px;
+}
+
+@media (max-width: 600px) {
+  .ind-card.ind-wide { grid-column: span 1; }
+  .ind-grid { grid-template-columns: 1fr 1fr; }
+  .ind-valor { font-size: 18px; }
 }
