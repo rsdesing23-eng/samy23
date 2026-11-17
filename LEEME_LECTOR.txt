@@ -1,0 +1,75 @@
+GRAFICADOR RS23 — LECTOR AUTOMÁTICO SIN TAMPERMONKEY (v5.0)
+=============================================================
+
+QUÉ CAMBIÓ
+   Antes, cada computadora nueva necesitaba instalar Tampermonkey y pegar el
+   script a mano. Ahora ese mismo trabajo lo hace una EXTENSIÓN DE CHROME
+   normal (carpeta "lector_extension", al lado de esta). Se instala UNA SOLA
+   VEZ por computadora (como cualquier extensión) y desde ahí, cada vez que
+   abras el enlace de graficador_rs23.html, se conecta sola: no hay que pegar
+   ningún script ni tocar nada en el juego.
+
+   Esto no es magia: ningún navegador deja que una página web lea sola el
+   contenido de otra página de otro sitio (es una protección de seguridad a
+   propósito). Por eso sigue haciendo falta ALGO instalado en el navegador —
+   antes era Tampermonkey + tu script, ahora es esta extensión. La diferencia
+   es que esta extensión no exige copiar y pegar código cada vez: se instala
+   una vez y queda funcionando sola.
+
+PASO 1 — Sube graficador_rs23 a GitHub Pages
+   1) Sube el contenido de esta carpeta (graficador_rs23.html, styles.css,
+      script.js, auto_velas.js, analisis.js) a un repositorio de GitHub.
+   2) Activa GitHub Pages para ese repositorio (Settings → Pages → Deploy
+      from a branch). Te va a quedar un enlace como:
+      https://tu-usuario.github.io/tu-repo/graficador_rs23.html
+   3) Ese es el enlace que vas a abrir desde cualquier computadora.
+
+PASO 2 — Instala la extensión (una sola vez por computadora)
+   1) Abre Chrome → chrome://extensions
+   2) Activa "Modo de desarrollador" (arriba a la derecha).
+   3) "Cargar extensión sin empaquetar" → selecciona la carpeta
+      "lector_extension".
+   4) Listo. No hace falta tocar nada más: la extensión ya reconoce
+      astrobet.ec, ecuabet.com, spribegaming y cualquier página alojada en
+      github.io (además de localhost y archivos locales, por si quieres
+      probar sin subir nada a GitHub todavía).
+
+PASO 3 — Úsala
+   1) Abre el enlace de graficador_rs23.html (el de GitHub Pages, o el
+      archivo local).
+   2) Inicia sesión una vez en astrobet.ec o ecuabet y deja esa pestaña
+      abierta (no hace falta que esté al frente: puede quedar en segundo
+      plano). Si no la abres tú, la app la abre sola en segundo plano a los
+      5 segundos de cargar, igual que antes.
+   3) El panel "Valores del juego" pasa a 🟢 Conectado solo. En el juego
+      verás abajo a la izquierda "🔌 Lector activo (extensión) · N valores".
+
+SI QUIERES SEGUIR USANDO TAMPERMONKEY EN ALGUNA COMPUTADORA
+   El archivo lector_aviator.user.js sigue aquí por si prefieres esa opción
+   en algún equipo puntual. Ambos caminos envían los valores de la misma
+   forma, así que puedes usar uno u otro sin que choquen entre sí.
+
+PARA DAR LA EXTENSIÓN A OTRA PERSONA SIN QUE TENGA QUE ACTIVAR "MODO
+DESARROLLADOR" NI CARGARLA A MANO
+   Eso ya requiere publicarla en la Chrome Web Store (Google cobra una cuota
+   única de registro de desarrollador y revisa la extensión antes de
+   publicarla). Es un paso aparte si llegas a necesitarlo; mientras tanto,
+   "cargar sin empaquetar" es gratis y controlas tú el código.
+
+---------------------------------------------------------------------------
+HISTORIAL ANTERIOR (v2 a v3.11, con Tampermonkey) — se conserva como referencia
+
+v2: El lector ya no depende del dominio exacto del juego: actúa en astrobet, en spribegaming y en
+    CUALQUIER iframe que esté dentro de astrobet (en el resto de webs no hace nada). Lee la franja
+    con el selector real de Spribe (.payouts-block) y, si no, con un método genérico. Si no llegan
+    valores, el panel de la app muestra un aviso naranja diciendo qué falta. El gráfico es de PUNTOS
+    de secuencia, con el valor en cada punto y su número (#). Colores (como el sitio): azul < 2x ·
+    morado 2x–10x · rosa ≥ 10x.
+
+v3: ya NO hay un segundo gráfico. Los valores reales del juego se dibujan en el "Gráfico de Secuencia"
+    principal, con el valor (ej. 2.35x) sobre cada punto.
+
+v3.1 a v3.11: primera lectura como referencia (no se grafica), Reset reinicia todo, colores por valor
+    (<2 roja · 2–3.99 verde · 4–9.99 dorada · ≥10 rosa), 1.00x = vela vino grande, gráfico de secuencia
+    desplazable, selector de páginas del juego (Astrobet, Ecuabet + las que guardes), panel "Análisis
+    de sesión" con Registro/CSV y Límites de sesión, botones Win/Lose en Controles, exportación CSV.

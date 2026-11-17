@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // ===================== LÓGICA DE APUESTAS =====================
+    // ===================== LÓGICA DE Operaciones=====================
     const capitalInput = document.getElementById('capital');
     const generateBetBtn = document.getElementById('generate-bet');
     const winBetBtn = document.getElementById('win-bet');
@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let capital = 0, betAmount = 0, currentBank = 0, sessionGoal = 0;
 
+    window.__banca = () => ({ capital, currentBank, betAmount, sessionGoal });
     function updateDisplays() {
         betAmountDisplay.textContent = `${betAmount.toFixed(2)} / ${(betAmount * 2).toFixed(2)}`;
         sessionGoalDisplay.textContent = sessionGoal.toFixed(2);
@@ -31,8 +32,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // ===================== GRAFICO 1 (PUNTOS Y LÍNEAS) =====================
     const canvas = document.getElementById('chart');
     const ctx = canvas.getContext('2d');
-    let data = [], colors = [], horizontalLines = [];
+    let data = [], colors = [], labels = [], horizontalLines = [];
     const margin = 20, chartWidth = canvas.width - 2 * margin, chartHeight = canvas.height - 2 * margin;
+    const SEQ_MAX = 300;            // puntos que se guardan (se pueden ver desplazando el gráfico)
+    let seqView = 50;               // puntos visibles a la vez
+    let seqOffset = 0;              // 0 = lo más reciente; >0 = mirando valores anteriores
+    const esGrande = c => c === '#ed4ac7' || c === '#8b0000';   // rosa y vino se dibujan más grandes
 
     function drawChart() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -55,6 +60,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const minY = Math.min(...data);
         const maxY = Math.max(...data);
         const yRange = maxY - minY || 1;
+
+        seqOffset = Math.max(0, Math.min(seqOffset, Math.max(0, data.length - seqView)));
+        const vEnd = data.length - seqOffset, vStart = Math.max(0, vEnd - seqView);
+        const vN = vEnd - vStart, vDen = Math.max(vN - 1, 1);
+        const xOf = i => margin + ((i - vStart) / vDen) * chartWidth;
 
         // Líneas de referencia
         ctx.fillStyle = "#00ffff";
@@ -81,28 +91,63 @@ document.addEventListener('DOMContentLoaded', function() {
         ctx.strokeStyle = '#fcfcfc';
         ctx.globalAlpha = 0.5;
         ctx.lineWidth = 2;
-        data.forEach((p, i) => {
-            const x = margin + (i / (data.length - 1)) * chartWidth;
-            const y = margin + chartHeight - ((p - minY) / yRange) * chartHeight;
-            if (i === 0) ctx.moveTo(x, y);
+        for (let i = vStart; i < vEnd; i++) {
+            const x = xOf(i);
+            const y = margin + chartHeight - ((data[i] - minY) / yRange) * chartHeight;
+            if (i === vStart) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
-        });
+        }
         ctx.stroke();
         ctx.globalAlpha = 1;
 
         // Puntos
-        data.forEach((p, i) => {
-            const x = margin + (i / (data.length - 1)) * chartWidth;
+        for (let i = vStart; i < vEnd; i++) {
+            const p = data[i];
+            const x = xOf(i);
             const y = margin + chartHeight - ((p - minY) / yRange) * chartHeight;
             const color = colors[i] || '#66a3ff';
             ctx.beginPath();
-            ctx.arc(x, y, 6, 0, Math.PI * 2);
+            ctx.arc(x, y, esGrande(color) ? 10 : 6, 0, Math.PI * 2);
             ctx.fillStyle = color;
             ctx.shadowColor = color;
             ctx.shadowBlur = 15;
             ctx.fill();
             ctx.shadowBlur = 0;
-        });
+        }
+
+        // Valor real (multiplicador) en cada punto
+        const stepX = vN > 1 ? chartWidth / (vN - 1) : chartWidth;
+        const vertical = stepX < 42;
+        ctx.font = (vertical ? 'bold 10px' : 'bold 12px') + ' sans-serif';
+        for (let i = vStart; i < vEnd; i++) {
+            const p = data[i];
+            if (labels[i] == null) continue;
+            const x = xOf(i);
+            const y = margin + chartHeight - ((p - minY) / yRange) * chartHeight;
+            const dy = esGrande(colors[i]) ? 5 : 0;      // el punto grande necesita la etiqueta más separada
+            const txt = Number(labels[i]).toFixed(2) + 'x';
+            const col = labels[i] >= 10 ? '#ff6ee0' : labels[i] >= 2 ? '#b98cff' : '#5cc8ff';
+            const abajo = y < margin + 46 + dy;           // si no cabe arriba, va debajo del punto
+            ctx.save();
+            ctx.fillStyle = col;
+            ctx.shadowColor = '#000'; ctx.shadowBlur = 3;
+            if (vertical) {
+                ctx.translate(x + 3, abajo ? y + 10 + dy : y - 10 - dy);
+                ctx.rotate(-Math.PI / 2);
+                ctx.textAlign = abajo ? 'right' : 'left';
+                ctx.fillText(txt, 0, 0);
+            } else {
+                ctx.textAlign = 'center';
+                ctx.fillText(txt, x, abajo ? y + 20 + dy : y - 11 - dy);
+            }
+            ctx.restore();
+        }
+
+        if (seqOffset > 0) {
+            ctx.save(); ctx.font = '12px Orbitron, sans-serif'; ctx.fillStyle = '#00ffff'; ctx.textAlign = 'left';
+            ctx.fillText(`◀ viendo anteriores (${vStart + 1}–${vEnd} de ${data.length})`, margin + 10, margin + 14);
+            ctx.restore();
+        }
 
         // Líneas horizontales
         horizontalLines.forEach(line => {
@@ -117,12 +162,50 @@ document.addEventListener('DOMContentLoaded', function() {
         ctx.setLineDash([]);
     }
 
+    // ── Desplazamiento del gráfico de secuencia (arrastrar / rueda / táctil), como el de velas ──
+    (function seqNavegacion() {
+        const wrap = canvas.parentElement;
+        if (getComputedStyle(wrap).position === 'static') wrap.style.position = 'relative';
+        const btn = document.createElement('button');
+        btn.textContent = '▶▶ Ir al final';
+        btn.style.cssText = 'display:none;position:absolute;top:14px;right:14px;font-family:Orbitron,sans-serif;font-size:11px;padding:4px 10px;background:#111;border:1px solid #0ff5;color:#0ff;border-radius:5px;cursor:pointer;z-index:10;';
+        btn.addEventListener('click', () => { seqOffset = 0; refrescarSeq(); });
+        wrap.appendChild(btn);
+        function refrescarSeq() { drawChart(); btn.style.display = seqOffset > 0 ? 'block' : 'none'; }
+        window.__refrescarSeq = refrescarSeq;
+        const pxPorPunto = () => (chartWidth / Math.max(seqView - 1, 1)) * (canvas.getBoundingClientRect().width / canvas.width);
+        let arrastrando = false, x0 = 0, off0 = 0;
+        canvas.style.cursor = 'grab';
+        canvas.addEventListener('mousedown', e => { arrastrando = true; x0 = e.clientX; off0 = seqOffset; canvas.style.cursor = 'grabbing'; });
+        window.addEventListener('mouseup', () => { arrastrando = false; canvas.style.cursor = 'grab'; });
+        window.addEventListener('mousemove', e => {
+            if (!arrastrando) return;
+            seqOffset = Math.max(0, off0 + Math.round((e.clientX - x0) / pxPorPunto()));
+            refrescarSeq();
+        });
+        let t0 = 0, toff0 = 0;
+        canvas.addEventListener('touchstart', e => { t0 = e.touches[0].clientX; toff0 = seqOffset; }, { passive: true });
+        canvas.addEventListener('touchmove', e => {
+            seqOffset = Math.max(0, toff0 + Math.round((e.touches[0].clientX - t0) / pxPorPunto()));
+            refrescarSeq();
+        }, { passive: true });
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            if (e.ctrlKey) seqView = Math.max(15, Math.min(150, seqView + (e.deltaY > 0 ? 5 : -5)));
+            else seqOffset = Math.max(0, seqOffset + (e.deltaY > 0 ? -3 : 3));
+            refrescarSeq();
+        }, { passive: false });
+    })();
+
     function addData(v, color = '#66a3ff') {
-        if (data.length >= 100) { data.shift(); colors.shift(); }
+        if (data.length >= SEQ_MAX) { data.shift(); colors.shift(); labels.shift(); }
+        if (seqOffset > 0) seqOffset++;      // si estás viendo valores anteriores, la vista no salta
+        labels.push(window.__valorReal != null ? window.__valorReal : null);   // valor real del juego (si viene del lector)
+        window.__valorReal = null;
         let newVal = data.length > 0 ? v + data[data.length - 1] : v;
         data.push(newVal);
         colors.push(color);
-        drawChart();
+        (window.__refrescarSeq || drawChart)();
         addCandleAuto(v, color);
         
     }
@@ -383,27 +466,368 @@ function showPatternCenterMessage() {
   }
 };
 
-    // ===================== GRAFICO 2 (VELAS) =====================
+    // ===================== GRAFICO 2 (VELAS) — PAN / ZOOM / 150 VELAS =====================
     const candleCanvas = document.getElementById('candlestick-chart');
-    const candleCtx = candleCanvas.getContext('2d');
-    const candleMargin = 20, candleWidth = 9;
-    let candles = [];
+    const candleCtx    = candleCanvas.getContext('2d');
+    const candleMargin = 40;
+    const CANDLE_MAX   = 150;   // historial máximo
+    let   candles      = [];
+    let   candleColors = [];    // color de botón de cada vela
 
+    // Vista: cuántas velas mostrar y desde cuál
+    let viewCount  = 40;        // velas visibles (zoom)
+    let viewOffset = 0;         // desplazamiento desde la derecha (pan)
+
+    // ── Utilidades de escala ──────────────────────────────────────────────
+    function getCandleView() {
+        const total = candles.length;
+        const end   = Math.max(total - viewOffset, 1);
+        const start = Math.max(end - viewCount, 0);
+        return { start, end, slice: candles.slice(start, end), offset: start };
+    }
+
+    function candleScaleY(p, minP, maxP, h) {
+        const r = maxP - minP || 1;
+        return candleMargin + (maxP - p) / r * (h - 2 * candleMargin);
+    }
+
+    // ── Regresión lineal interna ──────────────────────────────────────────
+    function regreLineal(velas) {
+        const n = velas.length;
+        if (n < 3) return null;
+        const closes = velas.map(c => c.close);
+        const mx = (n - 1) / 2;
+        const my = closes.reduce((a, v) => a + v, 0) / n;
+        const m  = closes.reduce((a, v, i) => a + (i - mx) * (v - my), 0)
+                 / closes.reduce((a, _, i) => a + (i - mx) ** 2, 0.001);
+        return { m, b: my - m * mx };
+    }
+
+    // ── Dibujado principal ────────────────────────────────────────────────
     function drawCandlestickChart() {
-        candleCtx.clearRect(0, 0, candleCanvas.width, candleCanvas.height);
+        const W = candleCanvas.width, H = candleCanvas.height;
+        candleCtx.clearRect(0, 0, W, H);
         if (candles.length === 0) return;
-        const allPrices = candles.flatMap(c => [c.open,c.close,c.high,c.low]);
-        const minP = Math.min(...allPrices), maxP = Math.max(...allPrices), yRange = maxP - minP;
-        candles.forEach((c,i) => {
-            const x = candleMargin + i*(candleWidth+4);
-            const scaleY = p => candleMargin + (maxP - p)/yRange*(candleCanvas.height-2*candleMargin);
-            const yH=scaleY(c.high), yL=scaleY(c.low), yO=scaleY(c.open), yC=scaleY(c.close);
-            const color = c.close>=c.open?'#00cc66':'#cc3333';
-            candleCtx.strokeStyle=color; candleCtx.beginPath();
-            candleCtx.moveTo(x+candleWidth/2,yH); candleCtx.lineTo(x+candleWidth/2,yL); candleCtx.stroke();
-            candleCtx.fillStyle=color;
-            candleCtx.fillRect(x,Math.min(yO,yC),candleWidth,Math.abs(yC-yO)||1);
+
+        const { start, end, slice } = getCandleView();
+        if (slice.length === 0) return;
+
+        const allP  = slice.flatMap(c => [c.open, c.close, c.high, c.low]);
+        const minP  = Math.min(...allP), maxP = Math.max(...allP);
+        const drawW = W - candleMargin * 2;
+        const cw    = Math.max(4, Math.floor(drawW / slice.length) - 2); // ancho dinámico
+
+        const sY = p => candleScaleY(p, minP, maxP, H);
+        const sX = i => candleMargin + (i + 0.5) * (drawW / slice.length);
+
+        // Grid horizontal
+        candleCtx.font = '9px Orbitron, sans-serif';
+        candleCtx.fillStyle = '#00ffff88';
+        candleCtx.textAlign = 'right';
+        for (let i = 0; i <= 4; i++) {
+            const val = minP + (maxP - minP) * i / 4;
+            const y   = sY(val);
+            candleCtx.strokeStyle = 'rgba(0,255,255,0.07)';
+            candleCtx.lineWidth = 0.5;
+            candleCtx.beginPath();
+            candleCtx.moveTo(candleMargin, y);
+            candleCtx.lineTo(W - 8, y);
+            candleCtx.stroke();
+            candleCtx.fillText(val.toFixed(1), candleMargin - 4, y + 3);
+        }
+        candleCtx.textAlign = 'left';
+
+        // Línea cero si está en rango
+        if (minP <= 0 && maxP >= 0) {
+            const y0 = sY(0);
+            candleCtx.strokeStyle = 'rgba(255,255,255,0.35)';
+            candleCtx.lineWidth = 1;
+            candleCtx.setLineDash([4, 4]);
+            candleCtx.beginPath(); candleCtx.moveTo(candleMargin, y0); candleCtx.lineTo(W - 8, y0); candleCtx.stroke();
+            candleCtx.setLineDash([]);
+        }
+
+        // ── Tendencia global (vista) ──
+        const tG = regreLineal(slice);
+        if (tG) {
+            const alc = tG.m > 0;
+            const x0 = sX(0), y0 = sY(tG.b);
+            const x1 = sX(slice.length - 1), y1 = sY(tG.m * (slice.length - 1) + tG.b);
+            candleCtx.save();
+            candleCtx.setLineDash([7, 4]); candleCtx.lineWidth = 1.8;
+            candleCtx.strokeStyle = alc ? 'rgba(0,255,128,0.5)' : 'rgba(255,80,80,0.5)';
+            candleCtx.beginPath(); candleCtx.moveTo(x0, y0); candleCtx.lineTo(x1, y1); candleCtx.stroke();
+            candleCtx.setLineDash([]); candleCtx.lineWidth = 1;
+            candleCtx.fillStyle = alc ? '#00ff80' : '#ff5050';
+            candleCtx.font = '10px Orbitron, sans-serif';
+            candleCtx.fillText(alc ? '↗ Global' : '↘ Global', x1 - 50, alc ? y1 - 6 : y1 + 14);
+            candleCtx.restore();
+        }
+
+        // ── Tendencia reciente (últimas 10 en vista) ──
+        if (slice.length >= 10) {
+            const rec = slice.slice(-10);
+            const tR  = regreLineal(rec);
+            if (tR) {
+                const alc = tR.m > 0;
+                const off = slice.length - 10;
+                const x0  = sX(off), y0 = sY(tR.b);
+                const x1  = sX(slice.length - 1), y1 = sY(tR.m * 9 + tR.b);
+                candleCtx.save();
+                candleCtx.setLineDash([3, 3]); candleCtx.lineWidth = 2.2;
+                candleCtx.strokeStyle = alc ? 'rgba(0,255,190,0.9)' : 'rgba(255,120,120,0.9)';
+                candleCtx.shadowColor = alc ? '#00ffaa' : '#ff8080'; candleCtx.shadowBlur = 8;
+                candleCtx.beginPath(); candleCtx.moveTo(x0, y0); candleCtx.lineTo(x1, y1); candleCtx.stroke();
+                candleCtx.shadowBlur = 0; candleCtx.setLineDash([]);
+                candleCtx.fillStyle = alc ? '#00ffaa' : '#ff8080';
+                candleCtx.font = '10px Orbitron, sans-serif';
+                candleCtx.fillText('(10v)', x1 - 32, alc ? y1 - 8 : y1 + 14);
+                candleCtx.restore();
+            }
+        }
+
+        // ── Soportes y Resistencias: auto-detectados + manuales ──
+        const nivelesAuto = (typeof detectarNivelesSRAutomaticos === 'function')
+            ? detectarNivelesSRAutomaticos().slice(0, 8)
+            : [];
+        nivelesAuto.forEach(n => {
+            const pct    = (n.nivel - Math.min(...data.slice(-150))) /
+                          ((Math.max(...data.slice(-150)) - Math.min(...data.slice(-150))) || 1);
+            const precio = minP + pct * (maxP - minP);
+            const yL     = sY(precio);
+            const esManual = n.manual;
+            const colBase  = n.tipo === 'resistencia' ? '#ff5050'
+                           : n.tipo === 'soporte'     ? '#00dd80'
+                           :                            '#ffff50';
+            const alpha  = esManual ? 0.9 : Math.min(0.4 + n.toques * 0.1, 0.85);
+            candleCtx.save();
+            candleCtx.setLineDash(esManual ? [8, 3] : [4, 5]);
+            candleCtx.strokeStyle = colBase + Math.round(alpha * 255).toString(16).padStart(2,'0');
+            candleCtx.lineWidth   = esManual ? 1.8 : 1;
+            candleCtx.shadowColor = colBase;
+            candleCtx.shadowBlur  = esManual ? 8 : 4;
+            candleCtx.beginPath(); candleCtx.moveTo(candleMargin, yL); candleCtx.lineTo(W - 10, yL); candleCtx.stroke();
+            candleCtx.setLineDash([]); candleCtx.shadowBlur = 0;
+            const etiq = n.tipo === 'resistencia' ? 'R' : n.tipo === 'soporte' ? 'S' : '0';
+            candleCtx.font = `${esManual ? 'bold ' : ''}9px Orbitron, sans-serif`;
+            candleCtx.fillStyle = colBase;
+            candleCtx.fillText(`${etiq}${n.toques > 1 ? n.toques : ''} ${n.nivel.toFixed(1)}`, W - 46, yL - 2);
+            candleCtx.restore();
         });
+
+        // ── Velas ──
+        slice.forEach((c, i) => {
+            const x   = sX(i);
+            const hw  = Math.max(cw / 2, 3);
+            const yH  = sY(c.high), yL = sY(c.low);
+            const yO  = sY(c.open),  yC = sY(c.close);
+            const alc = c.close >= c.open;
+            const col = alc ? '#00cc66' : '#cc3333';
+            // Mecha
+            candleCtx.strokeStyle = col; candleCtx.lineWidth = 1;
+            candleCtx.beginPath(); candleCtx.moveTo(x, yH); candleCtx.lineTo(x, yL); candleCtx.stroke();
+            // Cuerpo
+            candleCtx.fillStyle = col;
+            const bodyTop = Math.min(yO, yC), bodyH = Math.max(Math.abs(yC - yO), 1);
+            candleCtx.fillRect(x - hw, bodyTop, hw * 2, bodyH);
+        });
+
+        // ── Indicador de posición (scrollbar visual) ──
+        if (candles.length > viewCount) {
+            const barW  = W - candleMargin * 2;
+            const ratio = slice.length / candles.length;
+            const pos   = (candles.length - end) / candles.length;
+            candleCtx.fillStyle = 'rgba(0,255,255,0.12)';
+            candleCtx.fillRect(candleMargin + pos * barW, H - 6, ratio * barW, 4);
+            candleCtx.fillStyle = 'rgba(0,255,255,0.35)';
+            candleCtx.fillRect(candleMargin + pos * barW, H - 6, ratio * barW, 4);
+        }
+
+        // ── Etiqueta de navegación ──
+        if (viewOffset > 0) {
+            candleCtx.font = '10px Orbitron, sans-serif';
+            candleCtx.fillStyle = 'rgba(0,255,255,0.6)';
+            candleCtx.textAlign = 'center';
+            candleCtx.fillText(`◀ mostrando velas ${start + 1}–${end} de ${candles.length}`, W / 2, 14);
+            candleCtx.textAlign = 'left';
+        }
+    }
+
+    // ── Pan con ratón / touch ─────────────────────────────────────────────
+    let isDragging = false, dragStartX = 0, dragStartOffset = 0;
+
+    candleCanvas.addEventListener('mousedown', e => {
+        isDragging = true;
+        dragStartX = e.clientX;
+        dragStartOffset = viewOffset;
+        candleCanvas.style.cursor = 'grabbing';
+    });
+    window.addEventListener('mouseup', () => { isDragging = false; candleCanvas.style.cursor = 'crosshair'; });
+    window.addEventListener('mousemove', e => {
+        if (!isDragging) return;
+        const dx     = e.clientX - dragStartX;
+        const pixPerCandle = (candleCanvas.width - candleMargin * 2) / viewCount;
+        const delta  = Math.round(-dx / pixPerCandle);
+        viewOffset   = Math.max(0, Math.min(candles.length - viewCount, dragStartOffset + delta));
+        drawCandlestickChart();
+    });
+
+    // Touch
+    let touchStartX = 0, touchStartOffset = 0;
+    candleCanvas.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; touchStartOffset = viewOffset; }, { passive: true });
+    candleCanvas.addEventListener('touchmove', e => {
+        const dx = e.touches[0].clientX - touchStartX;
+        const pixPerCandle = (candleCanvas.width - candleMargin * 2) / viewCount;
+        viewOffset = Math.max(0, Math.min(candles.length - viewCount, touchStartOffset + Math.round(-dx / pixPerCandle)));
+        drawCandlestickChart();
+    }, { passive: true });
+
+    // ── Zoom con scroll ───────────────────────────────────────────────────
+    candleCanvas.addEventListener('wheel', e => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 5 : -5;
+        viewCount   = Math.max(10, Math.min(CANDLE_MAX, viewCount + delta));
+        // Anclar al extremo derecho si no hay pan activo
+        if (viewOffset === 0) drawCandlestickChart();
+        else {
+            viewOffset = Math.max(0, Math.min(candles.length - viewCount, viewOffset));
+            drawCandlestickChart();
+        }
+    }, { passive: false });
+
+    candleCanvas.style.cursor = 'crosshair';
+
+    // ── Agregar velas ─────────────────────────────────────────────────────
+    function addCandle(open, close, high, low, color) {
+        candles.push({ open, close, high, low });
+        candleColors.push(color || null);
+        if (candles.length > CANDLE_MAX) { candles.shift(); candleColors.shift(); }
+        // Auto-scroll al final si el usuario no está navegando
+        if (viewOffset === 0) drawCandlestickChart();
+        analyzeCandleTrend(candles[candles.length - 1]);
+    }
+
+    function addCandleAuto(v, color) {
+        let base  = candles.length > 0 ? candles[candles.length - 1].close : 1;
+        let range = Math.abs(v) || 1;
+        if      (color === '#ba1428') addCandle(base, base - range*0.6,  base + range*0.3,  base - range,      color);
+        else if (color === '#8b0000') addCandle(base, base - range*1.8,  base + range*1.0,  base - range*2.6,  color);
+        else if (color === '#6ceb52') addCandle(base, base + range*0.6,  base + range*0.3,  base - range*0.4,  color);
+        else if (color === '#ed4ac7') addCandle(base, base + range*1.8,  base + range*2.6,  base - range*0.8,  color);
+        else if (color === '#ffd700') addCandle(base, base + range*1.2,  base + range*2.0,  base - range*1.0,  color);
+        else                          addCandle(base, base + range*0.8,  base + range*1.4,  base - range*0.4,  color);
+    }
+
+    // ── Botón "ir al final" cuando el usuario está navegando ─────────────
+    (function crearBotonIrAlFinal() {
+        const btn = document.createElement('button');
+        btn.id = 'btn-ir-al-final';
+        btn.textContent = '▶▶ Ir al final';
+        btn.style.cssText = 'display:none;position:absolute;bottom:14px;right:14px;font-family:Orbitron,sans-serif;font-size:11px;padding:4px 10px;background:#111;border:1px solid #0ff5;color:#0ff;border-radius:5px;cursor:pointer;z-index:10;';
+        btn.addEventListener('click', () => { viewOffset = 0; drawCandlestickChart(); });
+        const wrapper = candleCanvas.parentElement;
+        if (wrapper) { wrapper.style.position = 'relative'; wrapper.appendChild(btn); }
+
+        // Mostrar/ocultar botón según si hay pan activo
+        const origDraw = drawCandlestickChart;
+        // Monkey-patch para actualizar botón
+        const _origDraw = drawCandlestickChart;
+        candleCanvas._showEndBtn = () => {
+            btn.style.display = viewOffset > 0 ? 'block' : 'none';
+        };
+    })();
+
+    // Llamar actualización del botón tras cada redibujado
+    const _drawOrig = drawCandlestickChart;
+    drawCandlestickChart = function() {
+        _drawOrig();
+        const btn = document.getElementById('btn-ir-al-final');
+        if (btn) btn.style.display = viewOffset > 0 ? 'block' : 'none';
+    };
+
+    // =====================================================================
+    // 🔊 AVISOS DE VOZ INTELIGENTES — solo cuando es necesario
+    // =====================================================================
+    let vozActiva = true;
+    let _vozUltimoTexto = '';
+    let _vozUltimaVez   = 0;
+    const VOZ_COOLDOWN  = 8000; // mínimo 8s entre mensajes de voz
+
+    function hablar(texto, forzar = false) {
+        if (!vozActiva) return;
+        if (!window.speechSynthesis) return;
+        const ahora = Date.now();
+        if (!forzar && (texto === _vozUltimoTexto || ahora - _vozUltimaVez < VOZ_COOLDOWN)) return;
+        _vozUltimoTexto = texto;
+        _vozUltimaVez   = ahora;
+        try {
+            window.speechSynthesis.cancel();
+            const u   = new SpeechSynthesisUtterance(texto);
+            u.lang    = 'es-ES'; u.rate = 1.05; u.pitch = 1.0; u.volume = 0.9;
+            const voces = window.speechSynthesis.getVoices();
+            const voz   = voces.find(v => v.lang.startsWith('es') && v.name.toLowerCase().includes('fem'))
+                       || voces.find(v => v.lang.startsWith('es')) || null;
+            if (voz) u.voice = voz;
+            window.speechSynthesis.speak(u);
+        } catch (e) { console.warn('Voz error:', e); }
+    }
+
+    // ── Detector de cambio de tendencia ──────────────────────────────────
+    let _tendenciaAnterior = null;
+
+    function evaluarVozTendencia() {
+        if (candles.length < 6) return;
+        const t = regreLineal(candles.slice(-6));
+        if (!t) return;
+        const tendActual = t.m > 0.08 ? 'alcista' : t.m < -0.08 ? 'bajista' : 'lateral';
+        if (tendActual !== _tendenciaAnterior && _tendenciaAnterior !== null) {
+            const msg = tendActual === 'alcista' ? 'Atención. Posible cambio de tendencia a alcista.'
+                      : tendActual === 'bajista' ? 'Atención. Posible cambio de tendencia a bajista.'
+                      : 'El mercado está entrando en zona lateral.';
+            hablar(msg);
+        }
+        _tendenciaAnterior = tendActual;
+    }
+
+    // ── Voz para patrones repetidos de Memoria IA ────────────────────────
+    let _ultimaFiguraAnunciada = '';
+
+    function evaluarVozFigurasRepetidas() {
+        if (memoriaVelas.length < 6) return;
+        const fig5 = detectarFigurasRepetidas(5, 2);
+        const fig3 = detectarFigurasRepetidas(3, 3);
+        const mejor = fig5[0] || fig3[0];
+        if (!mejor) return;
+        const [sig, veces] = mejor;
+        if (sig === _ultimaFiguraAnunciada) return;
+        _ultimaFiguraAnunciada = sig;
+        const pred = obtenerColorPredichoParaFigura(fig5[0] ? 5 : 3);
+        if (!pred || pred.prob < 60) return;
+        const nombre = (NOMBRES_COLOR[pred.color] || '').replace(/[🔴🍷🟩🩷💛]/g, '').trim();
+        hablar(`Patrón repetido ${veces} veces. Posible próximo color ${nombre}, confianza ${Math.round(pred.prob)} por ciento.`);
+    }
+
+    // Botón para activar/desactivar la voz — se crea en el panel de botones
+    (function crearBotonVoz() {
+        const btn = document.createElement('button');
+        btn.id = 'btn-voz';
+        btn.className = 'blue';
+        btn.style.cssText = 'font-family:Orbitron,sans-serif;font-size:13px;padding:6px 10px;border-radius:6px;cursor:pointer;border:1px solid #00aaff;background:#0044aa;color:#fff;';
+        btn.textContent = '🔊 Voz ON';
+        btn.addEventListener('click', () => {
+            vozActiva = !vozActiva;
+            btn.textContent = vozActiva ? '🔊 Voz ON' : '🔇 Voz OFF';
+            btn.style.background = vozActiva ? '#0044aa' : '#333';
+            if (vozActiva) hablar('Voz activada');
+        });
+        const fila = document.querySelector('.fila-botones');
+        if (fila) fila.appendChild(btn);
+    })();
+
+    // Pre-cargar voces en Safari/iOS (requiere interacción previa)
+    if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
     }
 
     function addCandle(open, close, high, low) {
@@ -472,29 +896,8 @@ function analyzeCandleTrend(candle) {
     trendData.bear = Math.floor(trendData.bear * 0.9);
   }
 
-  updateTrendCounter();// Actualizar visualmente  
-  document.getElementById('btn4').addEventListener('click', () => {
-    data = [];
-    colors = [];
-    candles = [];
-    horizontalLines = [];
-    drawChart();
-    drawCandlestickChart();
+  updateTrendCounter();// Actualizar visualmente
 
-    // 🔁 Reinicia el contador de tendencia
-    trendData = { bull: 0, bear: 0 };
-    updateTrendCounter();
-
-    // (opcional) feedback visual
-    const trendBox = document.getElementById('trend-summary');
-    if (trendBox) {
-        trendBox.style.transition = 'background-color 0.5s';
-        trendBox.style.backgroundColor = 'rgba(0,255,255,0.4)';
-        setTimeout(() => trendBox.style.backgroundColor = 'rgba(0,0,0,0.6)', 1000);
-    }
-
-    console.log("✅ Gráficos y tendencia reiniciados.");
-});
 
 }
 
@@ -504,72 +907,101 @@ function analyzeCandleTrend(candle) {
     document.getElementById('btn2').addEventListener('click', ()=>addData(1,'#6ceb52'));
     document.getElementById('btn9').addEventListener('click', ()=>addData(1,'#ed4ac7'));
     document.getElementById('btn10').addEventListener('click', ()=>addData(1,'#ffd700'));
-    document.getElementById('btn3').addEventListener('click', ()=>{data.pop();colors.pop();drawChart();candles.pop();drawCandlestickChart();});
-    document.getElementById('btn4').addEventListener('click', ()=>{data=[];colors=[];candles=[];horizontalLines=[];drawChart();drawCandlestickChart();});
+    document.getElementById('btn3').addEventListener('click', ()=>{data.pop();colors.pop();labels.pop();drawChart();candles.pop();drawCandlestickChart();});
+    document.getElementById('btn4').addEventListener('click', ()=>{
+        data=[];colors=[];labels=[];candles=[];horizontalLines=[];
+        seqOffset = 0;
+        window.__valorReal = null;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawChart();drawCandlestickChart();
+        try { trendData = { bull: 0, bear: 0 }; updateTrendCounter(); } catch (e) {}
+        if (window.speechSynthesis) try { window.speechSynthesis.cancel(); } catch (e) {}
+        if (window.__autoVelasReiniciar) window.__autoVelasReiniciar();
+    });
     document.getElementById('btn5').addEventListener('click', ()=>addHorizontalLine('#ff0000'));
     document.getElementById('btn6').addEventListener('click', ()=>addHorizontalLine('#00cc66'));
     document.getElementById('btn7').addEventListener('click', clearLastLine);
     document.getElementById('btn12').addEventListener('click', ()=>addHorizontalLine('#ffff00'));
 
  // === Gestión de Entradas A y B con alarma ===
-function setEntrada(timerId, labelId) {
-  const waitSeconds = 110; // ⏱ tiempo de espera
-  const now = new Date();
-  now.setSeconds(now.getSeconds() + waitSeconds);
-  const horaObjetivo = now.toLocaleTimeString();
+// Cada entrada (A y B) tiene su propio temporizador, completamente independiente:
+// pulsar una NO afecta a la otra ni a los conteos de Rosa del rastreador.
+const ENTRADA_ESPERA_SEG = 110;                       // ⏱ tiempo de espera
+const ENTRADA_NOMBRES = { 'proxima-entrada1': 'A', 'proxima-entrada2': 'B' };
 
-  const label = document.getElementById(labelId);
-  label.textContent = horaObjetivo;
-  label.dataset.targetTime = now.getTime();
-  label.style.color = "#00ffff";
-  label.style.textShadow = "0 0 10px #00ffff";
-
-  // Eliminar aviso anterior si existía
-  clearTimeout(label._timeout);
-  clearInterval(label._interval);
-
-  // Intervalo para comprobar cada segundo
-  label._interval = setInterval(() => {
-    const ahora = Date.now();
-    const diff = label.dataset.targetTime - ahora;
-    if (diff <= 0) {
-      clearInterval(label._interval);
-      triggerEntradaAlert(labelId);
-    }
-  }, 1000);
+function formatearRestante(ms) {
+  const t = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 }
 
-// === Alerta cuando llega la hora ===
-function triggerEntradaAlert(labelId) {
+function setEntrada(timerId, labelId) {
   const label = document.getElementById(labelId);
   const container = label.parentElement;
+  const nombre = ENTRADA_NOMBRES[labelId] || '';
+
+  // Cancelar SOLO lo que pertenece a esta entrada (conteo y parpadeo anteriores)
+  clearInterval(label._interval);
+  clearInterval(label._blink);
+  container.classList.remove('blink-alert');
+
+  const objetivo = Date.now() + ENTRADA_ESPERA_SEG * 1000;
+  const horaObjetivo = new Date(objetivo).toLocaleTimeString();
+  label.dataset.targetTime = objetivo;
+  label.style.color = '#00ffff';
+  label.style.textShadow = '0 0 10px #00ffff';
+
+  const pintar = () => {
+    label.textContent = `${horaObjetivo} · ⏳ ${formatearRestante(objetivo - Date.now())}`;
+  };
+  pintar();
+
+  label._interval = setInterval(() => {
+    if (objetivo - Date.now() <= 0) {
+      clearInterval(label._interval);
+      triggerEntradaAlert(labelId, horaObjetivo, nombre);
+    } else {
+      pintar();
+    }
+  }, 500);
+}
+
+// === Alerta cuando llega la hora (visual + sonido + mensaje + voz) ===
+function triggerEntradaAlert(labelId, horaObjetivo, nombre) {
+  const label = document.getElementById(labelId);
+  const container = label.parentElement;
+
+  label.textContent = `${horaObjetivo} ⚠️ ¡YA!`;
+  label.style.color = '#ff0';
 
   // 🔔 Sonido corto
   playBeep(200, 900, 0.2);
 
+  // 🗣️ Voz: indica cuál entrada se cumplió
+  hablar(`Entrada ${nombre} cumplida. Posible señal alta.`, true);
+
+  // 💬 Mensaje central
+  showCentralEntradaAlert(labelId);
+
   // 💡 Parpadeo visual durante 5s
   let count = 0;
-  const blink = setInterval(() => {
-    container.classList.toggle("blink-alert");
+  clearInterval(label._blink);
+  label._blink = setInterval(() => {
+    container.classList.toggle('blink-alert');
     if (++count >= 10) {
-      clearInterval(blink);
-      container.classList.remove("blink-alert");
-      label.style.color = "#ff0";
-      label.textContent += " ⚠️";
-        showCentralEntradaAlert(label.id);
+      clearInterval(label._blink);
+      container.classList.remove('blink-alert');
     }
   }, 500);
 }
+
 // === Mostrar mensaje de alerta central al cumplirse la hora ===
 function showCentralEntradaAlert(labelId) {
-  let msgText = labelId === "proxima-entrada1"
-    ? "⏰ Posible señal alta"
-    : "⏰ Posible señal alta";
+  const nombre = ENTRADA_NOMBRES[labelId] || '';
+  const msgText = `⏰ Entrada ${nombre}: posible señal alta`;
 
   const msgDiv = document.getElementById("pattern-center-message");
   if (!msgDiv) return;
 
-  // Mostrar mensaje con animación
   msgDiv.textContent = msgText;
   msgDiv.classList.add("visible");
   msgDiv.style.color = "#ffff00";
@@ -577,7 +1009,7 @@ function showCentralEntradaAlert(labelId) {
   msgDiv.style.boxShadow = "0 0 20px rgba(255,255,0,0.8)";
   msgDiv.style.backgroundColor = "rgba(0, 0, 0, 0.6)";
 
-  // Ocultar mensaje después de 5 segundos
+  // Ocultar mensaje después de 6 segundos
   clearTimeout(msgDiv._alertTimeout);
   msgDiv._alertTimeout = setTimeout(() => {
     msgDiv.classList.remove("visible");
@@ -585,7 +1017,7 @@ function showCentralEntradaAlert(labelId) {
     msgDiv.style.color = "#00ffff";
     msgDiv.style.textShadow = "0 0 10px #00ffff";
     msgDiv.style.boxShadow = "0 0 10px rgba(0,255,255,0.4)";
-  }, 5000);
+  }, 6000);
 }
 
 
@@ -606,6 +1038,90 @@ document.getElementById("btn11").addEventListener("click", () => setEntrada("btn
         const y = margin + chartHeight - ((value - minY) / yRange) * chartHeight;
         horizontalLines.push({ value, y, color });
         drawChart();
+
+        // Anunciar por voz qué se acaba de marcar
+        const tipo = color === '#ff0000' ? 'Resistencia' : color === '#00cc66' ? 'Soporte' : 'Zona cero';
+        hablar(`${tipo} marcado en nivel ${value.toFixed(1)}.`, true);
+    }
+
+    // ─── Sistema de avisos S/R ─────────────────────────────────────────────
+    // Registro de estados anteriores para no repetir el mismo aviso
+    const _srEstadoAnterior = {}; // key = line.value → 'encima'|'debajo'|'toca'
+
+    function evaluarVozSoporteResistencia() {
+        if (horizontalLines.length === 0 || data.length < 2) return;
+        const precioActual  = data.at(-1);
+        const precioAnterior = data.at(-2);
+
+        horizontalLines.forEach(line => {
+            const nivel     = line.value;
+            const tipo      = line.color === '#ff0000' ? 'resistencia'
+                            : line.color === '#00cc66' ? 'soporte'
+                            : 'zona cero';
+            const margen    = Math.abs(nivel) * 0.04 + 0.3; // ±4% o ±0.3 pts
+            const clave     = `${nivel}_${tipo}`;
+            const estadoPrev = _srEstadoAnterior[clave] || null;
+
+            // ── Ruptura: el precio cruzó la línea ──
+            if (precioAnterior < nivel && precioActual >= nivel) {
+                // Cruzó hacia arriba
+                if (tipo === 'resistencia') {
+                    hablar(`¡Atención! Precio rompe resistencia en ${nivel.toFixed(1)}. Posible entrada alcista.`);
+                } else if (tipo === 'soporte') {
+                    hablar(`El precio toca soporte en ${nivel.toFixed(1)} desde abajo. Zona clave alcista.`);
+                } else {
+                    hablar(`Precio cruza zona cero al alza. Señal de impulso.`);
+                }
+                _srEstadoAnterior[clave] = 'ruptura_arriba';
+                return;
+            }
+
+            if (precioAnterior > nivel && precioActual <= nivel) {
+                // Cruzó hacia abajo
+                if (tipo === 'soporte') {
+                    hablar(`¡Atención! Precio rompe soporte en ${nivel.toFixed(1)}. Señal bajista. No operar al alza.`);
+                } else if (tipo === 'resistencia') {
+                    hablar(`Precio baja desde resistencia en ${nivel.toFixed(1)}. Posible entrada bajista.`);
+                } else {
+                    hablar(`Precio cruza zona cero a la baja. Precaución.`);
+                }
+                _srEstadoAnterior[clave] = 'ruptura_abajo';
+                return;
+            }
+
+            // ── Proximidad: precio se acerca pero no cruza ──
+            const distancia = Math.abs(precioActual - nivel);
+            if (distancia <= margen) {
+                const estadoActual = 'cerca';
+                if (estadoPrev !== 'cerca') {
+                    if (tipo === 'resistencia') {
+                        hablar(`Precio se acerca a resistencia en ${nivel.toFixed(1)}. Precaución. Posible rebote bajista.`);
+                    } else if (tipo === 'soporte') {
+                        hablar(`Precio cerca de soporte en ${nivel.toFixed(1)}. Atento a posible rebote alcista.`);
+                    } else {
+                        hablar(`Precio en zona cero, nivel ${nivel.toFixed(1)}. Zona de decisión.`);
+                    }
+                }
+                _srEstadoAnterior[clave] = 'cerca';
+                return;
+            }
+
+            // ── Rebote: el precio se alejó tras tocar ──
+            if (estadoPrev === 'cerca') {
+                if (precioActual > nivel + margen) {
+                    if (tipo === 'soporte') hablar(`Rebote confirmado desde soporte. Buen momento alcista.`);
+                    else if (tipo === 'resistencia') hablar(`Precio rompe resistencia con fuerza. Opera al alza.`);
+                } else if (precioActual < nivel - margen) {
+                    if (tipo === 'resistencia') hablar(`Rebote bajista confirmado desde resistencia. No operar al alza.`);
+                    else if (tipo === 'soporte') hablar(`Ruptura de soporte confirmada. Señal bajista fuerte.`);
+                }
+                _srEstadoAnterior[clave] = precioActual > nivel ? 'encima' : 'debajo';
+                return;
+            }
+
+            // Estado base
+            _srEstadoAnterior[clave] = precioActual > nivel ? 'encima' : 'debajo';
+        });
     }
 
     function clearLastLine() {
@@ -613,6 +1129,319 @@ document.getElementById("btn11").addEventListener("click", () => setEntrada("btn
             horizontalLines.pop();
             drawChart();
         }
+    }
+
+    // =====================================================================
+    // 🧠 AUTO-DETECCIÓN DE SOPORTES Y RESISTENCIAS DESDE MEMORIA DE PATRONES
+    // =====================================================================
+
+    // Encuentra niveles donde el precio rebotó varias veces en el historial
+    // de datos del gráfico de secuencia. Retorna array de {nivel, tipo, toques}
+    function detectarNivelesSRAutomaticos() {
+        if (data.length < 8) return [];
+        const niveles = [];
+        const tolerance = (Math.max(...data) - Math.min(...data)) * 0.03 + 0.2;
+
+        // ── 1. Rebotes en gráfico de secuencia (data[]) ──
+        for (let i = 2; i < data.length - 2; i++) {
+            const v = data[i];
+            // Máximo local (resistencia)
+            if (v > data[i-1] && v > data[i-2] && v > data[i+1] && v > data[i+2]) {
+                const existe = niveles.find(n => Math.abs(n.nivel - v) < tolerance && n.tipo === 'resistencia');
+                if (existe) { existe.toques++; existe.ultimoIdx = i; }
+                else niveles.push({ nivel: v, tipo: 'resistencia', toques: 1, ultimoIdx: i, fuente: 'secuencia' });
+            }
+            // Mínimo local (soporte)
+            if (v < data[i-1] && v < data[i-2] && v < data[i+1] && v < data[i+2]) {
+                const existe = niveles.find(n => Math.abs(n.nivel - v) < tolerance && n.tipo === 'soporte');
+                if (existe) { existe.toques++; existe.ultimoIdx = i; }
+                else niveles.push({ nivel: v, tipo: 'soporte', toques: 1, ultimoIdx: i, fuente: 'secuencia' });
+            }
+        }
+
+        // ── 2. Rebotes en Memoria IA de velas (candles) ──
+        for (let i = 2; i < memoriaVelas.length - 2; i++) {
+            const c = memoriaVelas[i];
+            const alto = c.high, bajo = c.low, cierre = c.close;
+            // Sombras largas arriba = resistencia tocada
+            const sombraArr = c.high - Math.max(c.open, c.close);
+            const sombraBaj = Math.min(c.open, c.close) - c.low;
+            const cuerpo    = Math.abs(c.close - c.open) || 0.01;
+            if (sombraArr > cuerpo * 1.5) {
+                const existe = niveles.find(n => Math.abs(n.nivel - alto) < tolerance && n.tipo === 'resistencia');
+                if (existe) { existe.toques++; }
+                else niveles.push({ nivel: alto, tipo: 'resistencia', toques: 1, ultimoIdx: i, fuente: 'velas' });
+            }
+            if (sombraBaj > cuerpo * 1.5) {
+                const existe = niveles.find(n => Math.abs(n.nivel - bajo) < tolerance && n.tipo === 'soporte');
+                if (existe) { existe.toques++; }
+                else niveles.push({ nivel: bajo, tipo: 'soporte', toques: 1, ultimoIdx: i, fuente: 'velas' });
+            }
+        }
+
+        // ── 3. Líneas marcadas manualmente — siempre incluirlas ──
+        horizontalLines.forEach(line => {
+            const tipo = line.color === '#ff0000' ? 'resistencia'
+                       : line.color === '#00cc66' ? 'soporte' : 'zona_cero';
+            const existe = niveles.find(n => Math.abs(n.nivel - line.value) < tolerance && n.tipo === tipo);
+            if (existe) { existe.toques += 3; existe.manual = true; }
+            else niveles.push({ nivel: line.value, tipo, toques: 5, manual: true, fuente: 'manual' });
+        });
+
+        // Solo devolver niveles con al menos 2 toques (más relevantes primero)
+        return niveles.filter(n => n.toques >= 2).sort((a, b) => b.toques - a.toques);
+    }
+
+    // ── Historial de avisos S/R para no repetir ───────────────────────────
+    const _srAvisoCache = {};   // clave → { estado, ts }
+    const SR_COOLDOWN   = 25000; // 25s entre avisos del mismo nivel
+    const _srEtapa      = {};    // clave → 0 libre | 1 aviso 'se acerca' | 2 aviso 'toque' (hasta que el precio se aleje)
+
+    function _puedeAvisarSR(clave, estado) {
+        const prev = _srAvisoCache[clave];
+        const ahora = Date.now();
+        if (prev && prev.estado === estado && ahora - prev.ts < SR_COOLDOWN) return false;
+        _srAvisoCache[clave] = { estado, ts: ahora };
+        return true;
+    }
+
+    // ── Analizador principal — combina S/R auto + confirmación de IA ──────
+    function evaluarVozSoporteResistencia() {
+        if (data.length < 4) return;
+
+        const precioActual   = data.at(-1);
+        const precioAnterior = data.at(-2);
+        const niveles        = detectarNivelesSRAutomaticos();
+        if (niveles.length === 0) return;
+
+        // Contexto de la Memoria IA — ¿el historial es más alcista o bajista?
+        const statsIA   = calcularEstadisticasPatrones();
+        const totalIA   = Object.values(statsIA).reduce((a, v) => a + v.total, 0);
+        const upIA      = Object.values(statsIA).reduce((a, v) => a + v.up, 0);
+        const pctAlcIA  = totalIA > 0 ? Math.round(upIA / totalIA * 100) : 50;
+        const iaAlcista = pctAlcIA >= 55;
+        const iaBajista = pctAlcIA <= 45;
+
+        // Markov: próximo color
+        const markov     = prediccionMarkov();
+        const markovAlc  = markov && ['#6ceb52','#ed4ac7','#ffd700'].includes(markov.mejorColor) && markov.prob > 55;
+        const markovBaj  = markov && ['#ba1428','#8b0000'].includes(markov.mejorColor) && markov.prob > 55;
+
+        // Racha actual
+        const { n: rachaN, dir: rachaDir } = calcRacha();
+
+        niveles.slice(0, 6).forEach(n => {
+            const margen = Math.abs(n.nivel) * 0.05 + 0.4;
+            const clave  = `${n.tipo}_${n.nivel.toFixed(1)}`;
+            const dist   = Math.abs(precioActual - n.nivel);
+            const confianza = Math.min(n.toques * 15, 90); // % confianza por toques
+
+            // ── 🔔 AVISOS PREVIOS: se acerca / toque → posible ruptura ──────────
+            // Solo avisa cuando la memoria y el momentum indican que el nivel
+            // PUEDE ROMPERSE, y una sola vez por acercamiento (se vuelve a armar
+            // cuando el precio se aleja del nivel). Así no repite en cada toque.
+            if (n.tipo === 'soporte' || n.tipo === 'resistencia') {
+                const esRes   = n.tipo === 'resistencia';
+                const dirRomp = esRes ? 'UP' : 'DOWN';           // dirección en que se rompería
+                const signo   = esRes ? 1 : -1;
+                const lado    = esRes ? precioActual <= n.nivel : precioActual >= n.nivel;
+
+                // Re-armar cuando el precio se aleja del nivel
+                if (dist > Math.max(margen * 3, 4)) _srEtapa[clave] = 0;
+
+                if (lado && dist <= margen * 3 && (_srEtapa[clave] || 0) < 2) {
+                    // — Evidencia a favor / en contra de la ruptura —
+                    const favor = [], contra = [];
+                    const nombreDir = esRes ? 'alcista' : 'bajista';
+                    const net4 = precioActual - (data.at(-4) ?? precioActual);
+                    const ult10 = memoriaVelas.slice(-10).map(firmaVela);
+                    const pos10 = ult10.filter(c => ['#6ceb52','#ed4ac7','#ffd700'].includes(c)).length;
+                    const neg10 = ult10.filter(c => ['#ba1428','#8b0000'].includes(c)).length;
+                    const balFavor = esRes ? pos10 - neg10 : neg10 - pos10;
+
+                    if (rachaDir === dirRomp && rachaN >= 2)   favor.push(`racha ${nombreDir} de ${rachaN}`);
+                    else if (rachaDir && rachaDir !== dirRomp && rachaN >= 3) contra.push('racha contraria');
+                    if (esRes ? iaAlcista : iaBajista)         favor.push('memoria ' + nombreDir);
+                    else if (esRes ? iaBajista : iaAlcista)    contra.push('memoria contraria');
+                    if (esRes ? markovAlc : markovBaj)         favor.push('Markov ' + nombreDir);
+                    else if (esRes ? markovBaj : markovAlc)    contra.push('Markov contrario');
+                    if (net4 * signo >= 2)                     favor.push('impulso hacia el nivel');
+                    else if (net4 * signo <= -2)               contra.push('impulso en contra');
+                    if (balFavor >= 2)                         favor.push(`${esRes ? 'más positivas' : 'más negativas'} en memoria`);
+                    else if (balFavor <= -2)                   contra.push('memoria reciente en contra');
+                    if (n.toques >= 3)                         favor.push(`nivel tocado ${n.toques} veces (se debilita)`);
+
+                    const probable = favor.length >= 3 && favor.length > contra.length;
+                    const rechazo  = contra.length >= 3 && contra.length > favor.length;
+
+                    if (probable) {
+                        const razon = favor.slice(0, 3).join(', ');
+                        if (dist <= margen) {
+                            // TOQUE
+                            _srEtapa[clave] = 2;
+                            hablar(`Toque en ${n.tipo} ${n.nivel.toFixed(1)}. Alta probabilidad de ruptura.`, true);
+                            mostrarMensajeCentralRojo(`⚠️ Toque en ${n.tipo} ${n.nivel.toFixed(1)} — posible ruptura (${razon})`, 7000);
+                            playTono(esRes ? 'alcista' : 'bajista'); vibrarSegun('alerta');
+                        } else if ((_srEtapa[clave] || 0) < 1 && Math.abs(precioActual - n.nivel) < Math.abs(precioAnterior - n.nivel)) {
+                            // SE ACERCA (aviso previo)
+                            _srEtapa[clave] = 1;
+                            hablar(`Precio se acerca a ${n.tipo} ${n.nivel.toFixed(1)}. Posible ruptura.`, true);
+                            mostrarMensajeCentralRojo(`🔔 Se acerca a ${n.tipo} ${n.nivel.toFixed(1)} — posible ruptura (${razon})`, 6000);
+                        }
+                    }
+
+                    else if (rechazo && dist <= margen && (_srEtapa[clave] || 0) < 2) {
+                        // TOQUE con evidencia de que el nivel AGUANTA (rechazo / rebote)
+                        _srEtapa[clave] = 2;
+                        const razonC = contra.slice(0, 3).join(', ');
+                        if (esRes) {
+                            hablar(`Toque en resistencia ${n.nivel.toFixed(1)}. Probable rechazo. No operar al alza.`, true);
+                            mostrarMensajeCentralRojo(`🛑 Toque en resistencia ${n.nivel.toFixed(1)} — probable rechazo, no operar al alza (${razonC})`, 7000);
+                            playTono('bajista'); vibrarSegun('alerta');
+                        } else {
+                            hablar(`Toque en soporte ${n.nivel.toFixed(1)}. Probable rebote alcista. Esperar vela de confirmación.`, true);
+                            mostrarMensajeCentralRojo(`✅ Toque en soporte ${n.nivel.toFixed(1)} — probable rebote alcista (${razonC})`, 7000);
+                            playTono('alcista'); vibrarSegun('alerta');
+                        }
+                    }
+
+                    // Dentro de la zona de toque se omiten los avisos genéricos repetitivos,
+                    // pero se deja marcado el estado para que el "rebote confirmado" siga funcionando.
+                    if (dist <= margen) {
+                        _srAvisoCache[clave] = { estado: esRes ? 'cerca_abajo' : 'cerca_arriba', ts: Date.now() };
+                        return;
+                    }
+                }
+            }
+
+            // ── SOPORTE ───────────────────────────────────────────────────
+            if (n.tipo === 'soporte') {
+
+                // Cruce hacia abajo: soporte roto → NO OPERAR al alza
+                if (precioAnterior >= n.nivel && precioActual < n.nivel - margen * 0.3) {
+                    if (_puedeAvisarSR(clave, 'roto_abajo')) {
+                        const extras = iaBajista ? ' La memoria histórica confirma presión bajista.' : '';
+                        hablar(`Atención. Soporte roto en nivel ${n.nivel.toFixed(1)}. No operar al alza.${extras}`, true);
+                        playTono('bajista'); vibrarSegun('fuerte');
+                    }
+                    return;
+                }
+
+                // Precio toca soporte → aviso de entrada con intensidad según toques
+                if (dist <= margen && precioActual >= n.nivel) {
+                    if (_puedeAvisarSR(clave, 'cerca_arriba')) {
+
+                        // ── Según cuántas veces fue tocado este soporte ──
+                        if (n.toques >= 4) {
+                            // 4+ toques = soporte muy fuerte → ENTRADA clara
+                            if ((iaAlcista || markovAlc) && rachaDir !== 'DOWN') {
+                                hablar(`¡Soporte muy fuerte en ${n.nivel.toFixed(1)}! Tocado ${n.toques} veces. La memoria confirma señal alcista. Puedes operar al alza ahora.`, true);
+                                playTono('fuerte'); vibrarSegun('fuerte');
+                            } else if (iaBajista) {
+                                hablar(`Soporte fuerte en ${n.nivel.toFixed(1)}, ${n.toques} toques. Pero la memoria muestra presión bajista. Esperar confirmación antes de entrar.`);
+                                playTono('neutro');
+                            } else {
+                                hablar(`Soporte fuerte en ${n.nivel.toFixed(1)}, tocado ${n.toques} veces. Zona de entrada al alza. Espera una vela alcista para confirmar.`);
+                                playTono('alcista');
+                            }
+
+                        } else if (n.toques === 3) {
+                            // 3 toques = soporte moderado → posible entrada
+                            if (iaAlcista || markovAlc) {
+                                hablar(`Soporte moderado en ${n.nivel.toFixed(1)}, ${n.toques} toques. La memoria apoya la entrada alcista. Buena oportunidad.`);
+                                playTono('alcista');
+                            } else {
+                                hablar(`Soporte en ${n.nivel.toFixed(1)}, ${n.toques} toques históricos. Posible rebote. Confirmar con la siguiente vela antes de entrar.`);
+                            }
+
+                        } else {
+                            // 2 toques = soporte débil → atención, no entrar aún
+                            if ((iaAlcista || markovAlc) && rachaDir !== 'DOWN') {
+                                hablar(`Soporte en ${n.nivel.toFixed(1)}, ${n.toques} toques. La memoria indica posible rebote alcista. Espera confirmación para entrar.`);
+                            } else if (iaBajista || (rachaDir === 'DOWN' && rachaN >= 3)) {
+                                hablar(`Soporte débil en ${n.nivel.toFixed(1)}, ${n.toques} toques. La memoria muestra presión bajista. No operar aún.`);
+                            } else {
+                                hablar(`Soporte en ${n.nivel.toFixed(1)}, ${n.toques} toques. Zona de atención. Esperar confirmación alcista antes de entrar.`);
+                            }
+                        }
+                    }
+                    return;
+                }
+
+                // Rebote confirmado: estaba cerca y ahora subió
+                if (_srAvisoCache[clave]?.estado === 'cerca_arriba' && precioActual > n.nivel + margen) {
+                    if (_puedeAvisarSR(clave, 'rebote')) {
+                        const fuerza = n.toques >= 4 ? '¡Rebote fuerte confirmado!' : 'Rebote confirmado.';
+                        hablar(`${fuerza} Desde soporte ${n.nivel.toFixed(1)}. Señal alcista activa. Puedes operar al alza.`);
+                        playTono('fuerte'); vibrarSegun('fuerte');
+                    }
+                }
+            }
+
+            // ── RESISTENCIA ───────────────────────────────────────────────
+            if (n.tipo === 'resistencia') {
+
+                // Cruce hacia arriba: resistencia rota → posible entrada alcista fuerte
+                if (precioAnterior <= n.nivel && precioActual > n.nivel + margen * 0.3) {
+                    if (_puedeAvisarSR(clave, 'rota_arriba')) {
+                        const extras = iaAlcista ? ' La memoria histórica apoya el movimiento alcista.' : '';
+                        hablar(`Resistencia rota en ${n.nivel.toFixed(1)}.${extras} Posible entrada alcista fuerte.`, true);
+                        playTono('fuerte'); vibrarSegun('fuerte');
+                    }
+                    return;
+                }
+
+                // Precio cerca de resistencia → aviso con intensidad según toques
+                if (dist <= margen && precioActual <= n.nivel) {
+                    if (_puedeAvisarSR(clave, 'cerca_abajo')) {
+
+                        if (n.toques >= 4) {
+                            // 4+ toques = resistencia muy fuerte → NO operar al alza
+                            if (iaBajista || markovBaj || (rachaDir === 'UP' && rachaN >= 3)) {
+                                hablar(`¡Resistencia muy fuerte en ${n.nivel.toFixed(1)}! Tocada ${n.toques} veces. La memoria confirma rechazo. No operar al alza. Posible entrada bajista.`, true);
+                                playTono('bajista'); vibrarSegun('fuerte');
+                            } else {
+                                hablar(`Resistencia fuerte en ${n.nivel.toFixed(1)}, ${n.toques} toques. Zona de peligro alcista. No operar al alza hasta que la rompa.`);
+                                playTono('bajista');
+                            }
+
+                        } else if (n.toques === 3) {
+                            if (iaBajista || markovBaj) {
+                                hablar(`Resistencia en ${n.nivel.toFixed(1)}, ${n.toques} toques. La memoria indica rechazo probable. No operar al alza ahora.`);
+                                playTono('bajista');
+                            } else if (iaAlcista && markovAlc) {
+                                hablar(`Resistencia en ${n.nivel.toFixed(1)}, ${n.toques} toques. La memoria muestra impulso alcista. Vigilar si la rompe para entrar.`);
+                            } else {
+                                hablar(`Resistencia en ${n.nivel.toFixed(1)}, ${n.toques} toques. Esperar. No operar hasta confirmar dirección.`);
+                            }
+
+                        } else {
+                            hablar(`Resistencia detectada en ${n.nivel.toFixed(1)}, ${n.toques} toques. Precaución. Esperar confirmación antes de operar.`);
+                        }
+                    }
+                    return;
+                }
+
+                // Rebote bajista confirmado desde resistencia
+                if (_srAvisoCache[clave]?.estado === 'cerca_abajo' && precioActual < n.nivel - margen) {
+                    if (_puedeAvisarSR(clave, 'rebote_baj')) {
+                        const fuerza = n.toques >= 4 ? '¡Rebote bajista fuerte confirmado!' : 'Rebote bajista confirmado.';
+                        hablar(`${fuerza} Desde resistencia ${n.nivel.toFixed(1)}. No operar al alza.`);
+                        playTono('bajista'); vibrarSegun('debil');
+                    }
+                }
+            }
+
+            // ── ZONA CERO ─────────────────────────────────────────────────
+            if (n.tipo === 'zona_cero') {
+                if (dist <= margen) {
+                    if (_puedeAvisarSR(clave, 'zona_cero')) {
+                        const dir = iaAlcista ? 'alcista. Puedes operar al alza.' : iaBajista ? 'bajista. Evitar entrada al alza.' : 'sin dirección clara. Esperar confirmación.';
+                        hablar(`Precio en zona cero. La memoria histórica indica sesgo ${dir}`);
+                    }
+                }
+            }
+        });
     }
 
     drawChart();
@@ -797,7 +1626,7 @@ document.getElementById("btn11").addEventListener("click", () => setEntrada("btn
         if (entradas.length === 0) return null;
         const [colorGanador, veces] = entradas[0];
         const total = entradas.reduce((acc, [, n]) => acc + n, 0);
-        return { color: colorGanador, veces, total, firma: actual };
+        return { color: colorGanador, veces, total, prob: (veces / total) * 100, firma: actual };
     }
 
     // Muestra un aviso en pantalla, con el color sugerido, cuando la figura
@@ -828,12 +1657,13 @@ document.getElementById("btn11").addEventListener("click", () => setEntrada("btn
         const nombreColor = NOMBRES_COLOR[prediccion.color] || 'color indefinido';
         const confianza = Math.round((prediccion.veces / prediccion.total) * 100);
 
-        aviso.textContent = `🔁 Figura repetida ×${coincide[1]} — posible patrón: ${nombreColor} (${confianza}% de las veces)`;
+        aviso.textContent = `🔁 Figura de ${ventana} velas repetida ×${coincide[1]} — según la memoria, viene: ${nombreColor} (${confianza}% de las veces)`;
         aviso.style.background = prediccion.color + 'dd';
         aviso.style.boxShadow = `0 0 25px ${prediccion.color}`;
         aviso.style.color = (prediccion.color === '#ffd700') ? '#111' : '#fff';
         aviso.classList.add('visible');
 
+        hablar(`Figura repetida. Posible color ${nombreColor.replace(/[🔴🍷🟩🩷💛]/g,'').trim()}. Confianza ${confianza} por ciento.`);
         playBeep(150, 700, 0.15);
 
         clearTimeout(aviso._timeout);
@@ -861,33 +1691,23 @@ document.getElementById("btn11").addEventListener("click", () => setEntrada("btn
         const elPatrones = document.getElementById('mem-pattern-count');
         const elProbUp = document.getElementById('mem-prob-up');
         const elProbDown = document.getElementById('mem-prob-down');
-        const cuerpoTabla = document.getElementById('tabla-patrones-body');
-        if (!elVelas || !cuerpoTabla) return;
+        if (!elVelas) return;
 
         elVelas.textContent = memoriaVelas.length;
         elPatrones.textContent = memoriaPatrones.length;
 
         const stats = calcularEstadisticasPatrones();
         let totalUp = 0, totalDown = 0, totalResueltos = 0;
-        cuerpoTabla.innerHTML = '';
 
         Object.entries(stats)
             .sort((a, b) => b[1].total - a[1].total)
             .forEach(([nombre, s]) => {
                 totalUp += s.up; totalDown += s.down; totalResueltos += s.total;
-                const pctUp = s.total ? Math.round((s.up / s.total) * 100) : 0;
-                const pctDown = s.total ? Math.round((s.down / s.total) * 100) : 0;
-                const fila = document.createElement('tr');
-                fila.innerHTML = `<td>${nombreCortoPatron(nombre)}</td><td>${s.total}</td><td class="prob-up">${pctUp}%</td><td class="prob-down">${pctDown}%</td>`;
-                cuerpoTabla.appendChild(fila);
             });
 
         if (elProbUp) elProbUp.textContent = totalResueltos ? Math.round((totalUp / totalResueltos) * 100) + '%' : '--%';
         if (elProbDown) elProbDown.textContent = totalResueltos ? Math.round((totalDown / totalResueltos) * 100) + '%' : '--%';
 
-        // Secuencias de 3 colores y de 5 colores, cada una con su conteo de repeticiones
-        renderizarListaFiguras(document.getElementById('lista-figuras-repetidas'), 3);
-        renderizarListaFiguras(document.getElementById('lista-figuras-repetidas-5'), 5);
     }
 
     function registrarVelaEnMemoria(candle, color) {
@@ -925,7 +1745,15 @@ document.getElementById("btn11").addEventListener("click", () => setEntrada("btn
             // 3) Se detectan los patrones vigentes ahora, para resolverlos con la próxima vela
             try { patronesPendientes = checkPatterns(); } catch (e) { patronesPendientes = []; }
             // 4) Si la figura actual ya se repitió antes, avisar en pantalla con el color sugerido
-            try { evaluarAvisoFiguraRepetida(); } catch (e) { console.warn('Error evaluando aviso de figura:', e); }
+            try {
+                const act5 = memoriaVelas.slice(-5).map(firmaVela).join('-');
+                const hay5 = memoriaVelas.length >= 7 && detectarFigurasRepetidas(5, 2).some(([sig]) => sig === act5);
+                evaluarAvisoFiguraRepetida(hay5 ? 5 : 3);
+            } catch (e) { console.warn('Error evaluando aviso de figura:', e); }
+            // Voz inteligente — solo cuando hay algo relevante
+            try { evaluarVozTendencia(); }                 catch (e) {}
+            try { evaluarVozFigurasRepetidas(); }          catch (e) {}
+            try { evaluarVozSoporteResistencia(); }        catch (e) {}
         }
     };
 
@@ -1359,7 +2187,11 @@ document.getElementById("btn11").addEventListener("click", () => setEntrada("btn
             // Sonido según dirección dominante de la vela
             const tipo = ['#6ceb52','#ed4ac7','#ffd700'].includes(color) ? 'alcista' : 'bajista';
             const { n } = calcRacha();
-            if (n >= 4) { playTono('racha'); vibrarSegun('racha'); }
+            if (n >= 4) {
+                playTono('racha');
+                vibrarSegun('racha');
+                hablar(`Alerta, racha de ${n} velas consecutivas. Posible cambio de tendencia.`);
+            }
 
             // Notificación del sistema si el score es muy alto
             const patActivos = checkPatterns();
@@ -1383,6 +2215,1030 @@ document.getElementById("btn11").addEventListener("click", () => setEntrada("btn
 
     // Primer render inmediato con datos ya cargados
     actualizarIndicadores();
+
+    // =====================================================================
+    // 🔁 RASTREADOR DE CICLO DE VELAS
+    // Permite marcar una vela clave y configurar cada cuántas velas se
+    // espera que se repita. Avisa con voz cuando se acerca el momento.
+    // =====================================================================
+
+    let ciclosActivos = [];       // array de ciclos en curso
+    let velasTotales  = candles.length; // contador global de velas
+
+    // Colores y nombres cortos
+    const CICLO_NOMBRES = {
+        '#ed4ac7': 'Rosa',
+        '#ffd700': 'Dorada',
+        '#6ceb52': 'Verde',
+        '#ba1428': 'Roja débil',
+        '#8b0000': 'Roja vino',
+        '#ffffff': 'Otra'
+    };
+
+    // ── Crear un ciclo nuevo ─────────────────────────────────────────────
+    function crearCiclo(nombre, color, velasHasta, auto) {
+        const id = Date.now() + Math.random();
+        const ciclo = {
+            id,
+            auto: !!auto,
+            nombre: nombre || CICLO_NOMBRES[color] || 'Vela',
+            color,
+            velasHasta: parseInt(velasHasta) || 25,
+            velasDesde: velasTotales,   // vela en la que se marcó
+            velasTranscurridas: 0,
+            alertado50: false,
+            alertado80: false,
+            alertadoLlegada: false
+        };
+        ciclosActivos.push(ciclo);
+        renderizarCiclos();
+        if (!auto) hablar(`Ciclo marcado: ${ciclo.nombre}. Te avisaré en ${ciclo.velasHasta} velas.`, true);
+        return ciclo;
+    }
+
+    // ── Análisis de memoria al cumplirse un conteo ────────────────────────
+    // Cuenta velas positivas (verde, rosa, dorada) y negativas (rojas) de las
+    // últimas N velas guardadas en la Memoria IA, donde N = duración del ciclo.
+    const COLORES_POSITIVOS = ['#6ceb52', '#ed4ac7', '#ffd700'];
+    const COLORES_NEGATIVOS = ['#ba1428', '#8b0000'];
+
+    function balanceMemoria(n) {
+        const ult = memoriaVelas.slice(-n).map(firmaVela);
+        return {
+            pos: ult.filter(c => COLORES_POSITIVOS.includes(c)).length,
+            neg: ult.filter(c => COLORES_NEGATIVOS.includes(c)).length,
+            total: ult.length
+        };
+    }
+
+    function mostrarMensajeCentralRojo(texto, ms) {
+        const msgDiv = document.getElementById('pattern-center-message');
+        if (!msgDiv) return;
+        msgDiv.textContent = texto;
+        msgDiv.classList.add('visible');
+        msgDiv.style.color = '#ff4d4d';
+        msgDiv.style.textShadow = '0 0 15px #ff0000';
+        msgDiv.style.boxShadow = '0 0 20px rgba(255,0,0,0.8)';
+        msgDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+        clearTimeout(msgDiv._alertTimeout);
+        msgDiv._alertTimeout = setTimeout(() => {
+            msgDiv.classList.remove('visible');
+            msgDiv.textContent = '⚪ Sin patrón detectado...';
+            msgDiv.style.color = '#00ffff';
+            msgDiv.style.textShadow = '0 0 10px #00ffff';
+            msgDiv.style.boxShadow = '0 0 10px rgba(0,255,255,0.4)';
+        }, ms || 8000);
+    }
+
+    // ── Actualizar ciclos al llegar una nueva vela ────────────────────────
+    function actualizarCiclos(sinIncremento) {
+        // Contador propio: candles se recorta (máx. ~60), por eso no se usa candles.length
+        if (!sinIncremento) velasTotales++;
+        let algoCambio = false;
+
+        ciclosActivos.forEach(c => {
+            c.velasTranscurridas = velasTotales - c.velasDesde;
+            const restantes = c.velasHasta - c.velasTranscurridas;
+            const pct       = c.velasTranscurridas / c.velasHasta;
+
+            // ── Aviso al 50% ──
+            if (!c.alertado50 && pct >= 0.5) {
+                c.alertado50 = true;
+                hablar(`${c.nombre}: llevas ${c.velasTranscurridas} velas. Faltan ${restantes} para posible repetición.`);
+                algoCambio = true;
+            }
+
+            // ── Aviso al 80% (pronto) ──
+            if (!c.alertado80 && pct >= 0.8) {
+                c.alertado80 = true;
+                hablar(`Atención. ${c.nombre} puede repetirse en ${restantes} velas. Prepárate.`);
+                playTono('neutro');
+                algoCambio = true;
+            }
+
+            // ── Aviso de llegada exacta ──
+            if (!c.alertadoLlegada && c.velasTranscurridas >= c.velasHasta) {
+                c.alertadoLlegada = true;
+                const bal = balanceMemoria(c.velasHasta);
+                if (c.auto && bal.pos > bal.neg) {
+                    // Más positivas que negativas en el ciclo → posible giro bajista
+                    hablar(`${c.nombre} cumplió ${c.velasHasta} velas. Posible cambio de tendencia a bajista. No operar.`, true);
+                    mostrarMensajeCentralRojo(`⛔ ${c.nombre}: ${bal.pos} positivas vs ${bal.neg} negativas — posible cambio a BAJISTA, no operar`, 9000);
+                    playTono('bajista'); vibrarSegun('alerta');
+                } else {
+                    hablar(`¡Ahora! Posible repetición de ${c.nombre}. Se cumplen ${c.velasHasta} velas desde que la marcaste.`, true);
+                    playTono('fuerte'); vibrarSegun('alerta');
+                }
+                algoCambio = true;
+            }
+
+            // ── Aviso de 1 vela antes (alerta inmediata) ──
+            if (!c.alertadoPrevio && restantes === 1 && !c.alertadoLlegada) {
+                c.alertadoPrevio = true;
+                hablar(`¡Una vela más! ${c.nombre} podría repetirse en la próxima vela.`, true);
+                playTono('alcista');
+                algoCambio = true;
+            }
+        });
+
+        // Los conteos automáticos de Rosa se quitan de la tabla en cuanto se cumplen
+        // (después de haber lanzado su aviso de voz). Los manuales se quedan.
+        ciclosActivos = ciclosActivos.filter(c => !(c.auto && c.alertadoLlegada));
+
+        if (algoCambio || ciclosActivos.length > 0) renderizarCiclos();
+    }
+
+    // ── Renderizar la lista visual de ciclos ─────────────────────────────
+    function renderizarCiclos() {
+        const lista = document.getElementById('ciclo-lista');
+        if (!lista) return;
+
+        if (ciclosActivos.length === 0) {
+            lista.innerHTML = '<p style="text-align:center;color:#555;font-size:12px;font-family:sans-serif;padding:8px">Sin ciclos activos. Marca una vela para comenzar.</p>';
+            return;
+        }
+
+        lista.innerHTML = ciclosActivos.map(c => {
+            const restantes = Math.max(0, c.velasHasta - c.velasTranscurridas);
+            const pct       = Math.min(c.velasTranscurridas / c.velasHasta, 1);
+            const pctPx     = Math.round(pct * 100);
+            const barColor  = pct < 0.5 ? '#a855f7' : pct < 0.8 ? '#ffd700' : '#00ff80';
+            const claseItem = c.alertadoLlegada ? 'alerta-ahora' : pct >= 0.8 ? 'alerta-pronto' : '';
+            const estado    = c.alertadoLlegada ? '🟢 ¡Momento!' : pct >= 0.8 ? '⚡ Pronto' : `⏳ ${restantes}v restantes`;
+
+            return `<div class="ciclo-item ${claseItem}" data-id="${c.id}">
+                <div class="ciclo-dot" style="background:${c.color};color:${c.color}"></div>
+                <div class="ciclo-info">
+                    <div class="ciclo-nombre-txt">${c.nombre}</div>
+                    <div class="ciclo-meta">Marcado en vela ${c.velasDesde} · cada ${c.velasHasta}v · ${estado}</div>
+                </div>
+                <div class="ciclo-barra-wrap">
+                    <div class="ciclo-barra" style="width:${pctPx}%;background:${barColor}"></div>
+                </div>
+                <div class="ciclo-contador" style="color:${barColor}">${c.velasTranscurridas}/${c.velasHasta}</div>
+                <button class="ciclo-btn-del" onclick="eliminarCiclo('${c.id}')">✕</button>
+            </div>`;
+        }).join('');
+    }
+
+    // Exponer globalmente para el onclick inline
+    window.eliminarCiclo = function(id) {
+        ciclosActivos = ciclosActivos.filter(c => String(c.id) !== String(id));
+        renderizarCiclos();
+    };
+
+    // ── Botón Marcar ─────────────────────────────────────────────────────
+    document.getElementById('ciclo-marcar')?.addEventListener('click', () => {
+        const nombre = document.getElementById('ciclo-nombre').value.trim();
+        const color  = document.getElementById('ciclo-color').value;
+        const velas  = parseInt(document.getElementById('ciclo-velas').value) || 25;
+        crearCiclo(nombre, color, velas);
+        document.getElementById('ciclo-nombre').value = '';
+    });
+
+    // ── Presets de número de velas ────────────────────────────────────────
+    document.querySelectorAll('.ciclo-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('ciclo-velas').value = btn.dataset.v;
+            document.querySelectorAll('.ciclo-preset').forEach(b => b.classList.remove('activo'));
+            btn.classList.add('activo');
+        });
+    });
+
+    // ── Enganchar al ciclo de velas ───────────────────────────────────────
+    const _addCandleConCiclo = addCandleAuto;
+    addCandleAuto = function(v, color) {
+        _addCandleConCiclo(v, color);
+        try { actualizarCiclos(); } catch(e) { console.warn('Error ciclo velas:', e); }
+    };
+
+    // ── 🩷 ROSA: al pulsar +10 Rosa arranca solo el conteo de 25 velas ────
+    // (se ejecuta DESPUÉS del listener original, cuando la vela rosa ya existe;
+    //  esa vela es el punto 0 y cuentan las 25 siguientes)
+    let _rosaSeq = 0;
+    document.getElementById('btn9')?.addEventListener('click', () => {
+        // Cada Rosa abre su PROPIO conteo de 25; los anteriores siguen corriendo
+        _rosaSeq++;
+        crearCiclo(`Rosa #${_rosaSeq}`, '#ed4ac7', 25, true);
+    });
+
+    // ── Undo / Reset mantienen el contador sincronizado ───────────────────
+    document.getElementById('btn3')?.addEventListener('click', () => {
+        velasTotales = Math.max(0, velasTotales - 1);
+        // si se deshizo la vela rosa, se quita su ciclo automático
+        ciclosActivos = ciclosActivos.filter(c => !(c.auto && c.velasDesde > velasTotales));
+        actualizarCiclos(true);
+    });
+    document.getElementById('btn4')?.addEventListener('click', () => {
+        velasTotales = 0;
+        _rosaSeq = 0;
+        ciclosActivos = [];
+        renderizarCiclos();
+    });
+
+    renderizarCiclos();
+
+
+    // =====================================================================
+    // 🩷 AVISO DE POSIBLE ENTRADA ROSA (y Dorada) SEGÚN LA MEMORIA
+    // Cruza 3 fuentes y avisa cuando coinciden al menos 2 puntos:
+    //   1) Figura repetida: la misma secuencia de 3-5 velas ya ocurrió antes
+    //      y después vino la vela clave.
+    //   2) Intervalo típico: la vela clave suele salir cada ~N velas.
+    //   3) Ciclo activo: el rastreador está a 2 velas o menos de cumplirse.
+    // =====================================================================
+    const CLAVES_AVISO = [
+        { color: '#ed4ac7', nombre: 'ROSA',   emoji: '🩷', voz: 'rosa'   },
+        { color: '#ffd700', nombre: 'DORADA', emoji: '💛', voz: 'dorada' }
+    ];
+    let _ultimoAvisoClave = '';
+
+    // (1) ¿Qué pasó las veces anteriores que apareció esta misma figura?
+    function analizarFiguraParaColor(color) {
+        const n = memoriaVelas.length;
+        for (const w of [5, 4, 3]) {
+            if (n < w + 2) continue;
+            const actual = memoriaVelas.slice(-w).map(firmaVela).join('-');
+            let veces = 0, aciertos = 0;
+            for (let i = 0; i <= n - w - 1; i++) {   // excluye la ocurrencia actual
+                const seq = memoriaVelas.slice(i, i + w).map(firmaVela).join('-');
+                if (seq === actual) {
+                    veces++;
+                    if (firmaVela(memoriaVelas[i + w]) === color) aciertos++;
+                }
+            }
+            const prob = veces ? aciertos / veces : 0;
+            const valida = (w >= 4)
+                ? (veces >= 2 && aciertos >= 1 && prob >= 0.5)
+                : (veces >= 3 && aciertos >= 2 && prob >= 0.4);
+            if (valida) return { w, veces, aciertos, prob };
+        }
+        return null;
+    }
+
+    // (2) ¿Cada cuántas velas suele salir y cuántas van desde la última?
+    function analizarIntervaloColor(color) {
+        const idx = [];
+        memoriaVelas.forEach((v, i) => { if (firmaVela(v) === color) idx.push(i); });
+        if (idx.length < 3) return null;
+        const gaps = [];
+        for (let i = 1; i < idx.length; i++) gaps.push(idx[i] - idx[i - 1]);
+        const orden = [...gaps].sort((a, b) => a - b);
+        const tip = orden[Math.floor(orden.length / 2)];               // mediana
+        const parecidos = gaps.filter(g => Math.abs(g - tip) <= 1).length;
+        if (parecidos < 2) return null;                                  // intervalo poco constante
+        const desde = memoriaVelas.length - 1 - idx[idx.length - 1];    // velas desde la última
+        if (desde < 1) return null;
+        if (Math.abs((desde + 1) - tip) > 1) return null;               // la próxima vela cae en la ventana típica
+        return { tip, desde };
+    }
+
+    function evaluarAvisoClaves() {
+        const box = document.getElementById('aviso-rosa-posible');
+        if (!box) return;
+
+        const avisos = [];
+        CLAVES_AVISO.forEach(k => {
+            const razones = [];
+            let pts = 0;
+
+            const f = analizarFiguraParaColor(k.color);
+            if (f) {
+                razones.push(`Figura de ${f.w} velas repetida ${f.veces}× → después vino ${k.nombre.toLowerCase()} ${f.aciertos} de ${f.veces} veces`);
+                pts += f.prob >= 0.6 ? 2 : 1;
+            }
+            const iv = analizarIntervaloColor(k.color);
+            if (iv) {
+                razones.push(`Suele salir cada ~${iv.tip} velas y van ${iv.desde}`);
+                pts += 1;
+            }
+            try {
+                const cercanos = ciclosActivos
+                    .filter(x => x.color === k.color)
+                    .map(x => ({ c: x, rest: x.velasHasta - x.velasTranscurridas }))
+                    .filter(x => x.rest <= 2 && x.rest >= -1)
+                    .sort((a, b) => Math.abs(a.rest) - Math.abs(b.rest));
+                if (cercanos.length) {
+                    const { c, rest } = cercanos[0];
+                    {
+                        razones.push(`${c.nombre}: ${rest > 0 ? 'faltan ' + rest + ' velas' : 'cumplido'}`);
+                        pts += 1;
+                    }
+                }
+            } catch (e) {}
+
+            if (pts >= 2) avisos.push({ k, razones, pts });
+        });
+
+        if (avisos.length === 0) {
+            box.classList.remove('visible');
+            _ultimoAvisoClave = '';
+            return;
+        }
+
+        avisos.sort((a, b) => b.pts - a.pts);
+        const principal = avisos[0];
+        const nivel = p => p >= 3 ? 'ALTA' : 'MEDIA';
+
+        box.innerHTML = avisos.map(a =>
+            `<div class="arp-titulo">${a.k.emoji} POSIBLE ENTRADA ${a.k.nombre} — confianza ${nivel(a.pts)}</div>` +
+            a.razones.map(r => `<div class="arp-razon">• ${r}</div>`).join('')
+        ).join('');
+        box.style.background  = principal.k.color + 'dd';
+        box.style.boxShadow   = `0 0 25px ${principal.k.color}`;
+        box.style.color       = principal.k.color === '#ffd700' ? '#111' : '#fff';
+        box.classList.add('visible');
+
+        // Voz y sonido solo cuando el aviso es nuevo (no en cada vela)
+        const clave = avisos.map(a => a.k.nombre + a.pts).join('|');
+        if (clave !== _ultimoAvisoClave) {
+            _ultimoAvisoClave = clave;
+            hablar(`Patrón repetido. Posible entrada ${principal.k.voz}. Confianza ${nivel(principal.pts).toLowerCase()}.`, principal.pts >= 3);
+            try { playTono('alcista'); vibrarSegun('alerta'); } catch (e) {}
+        }
+    }
+
+    (function crearAvisoRosa() {
+        if (document.getElementById('aviso-rosa-posible')) return;
+        const d = document.createElement('div');
+        d.id = 'aviso-rosa-posible';
+        document.body.appendChild(d);
+    })();
+
+    const _addCandleConClaves = addCandleAuto;
+    addCandleAuto = function(v, color) {
+        _addCandleConClaves(v, color);
+        try { evaluarAvisoClaves(); } catch (e) { console.warn('Error aviso rosa:', e); }
+    };
+
+    ['btn-reset-memoria', 'btn4'].forEach(id => {
+        document.getElementById(id)?.addEventListener('click', () => {
+            document.getElementById('aviso-rosa-posible')?.classList.remove('visible');
+            _ultimoAvisoClave = '';
+        });
+    });
+
+    // =====================================================================
+    // 🎯 SISTEMA DE DECISIÓN: ¿OPERO O NO OPERO?
+    // Analiza TODOS los indicadores y da una decisión clara con motivos
+    // =====================================================================
+
+    // ─── Motor de decisión ───────────────────────────────────────────────
+    function evaluarDecision() {
+        const razones  = [];   // { texto, tipo: 'favor'|'contra'|'neutro' }
+        let ptsUp = 0, ptsDown = 0;
+
+        // ── 1. RSI ──
+        const rsi = calcRsi(7);
+        if (rsi < 30)      { razones.push({ texto: `RSI ${rsi.toFixed(0)} — sobreventa fuerte → probable rebote alcista`, tipo: 'favor' }); ptsUp += 2; }
+        else if (rsi < 40) { razones.push({ texto: `RSI ${rsi.toFixed(0)} — sobreventa leve`, tipo: 'favor' }); ptsUp += 1; }
+        else if (rsi > 70) { razones.push({ texto: `RSI ${rsi.toFixed(0)} — sobrecompra fuerte → probable caída`, tipo: 'contra' }); ptsDown += 2; }
+        else if (rsi > 60) { razones.push({ texto: `RSI ${rsi.toFixed(0)} — sobrecompra leve`, tipo: 'contra' }); ptsDown += 1; }
+        else               { razones.push({ texto: `RSI ${rsi.toFixed(0)} — zona neutra, sin señal clara`, tipo: 'neutro' }); }
+
+        // ── 2. EMA cruce ──
+        if (data.length >= 13) {
+            const ema5 = calcEma(data, 5), ema12 = calcEma(data, 12);
+            const diff = ema5.at(-1) - ema12.at(-1);
+            if (ema5.at(-2) <= ema12.at(-2) && ema5.at(-1) > ema12.at(-1)) {
+                razones.push({ texto: 'EMA5 acaba de cruzar EMA12 hacia arriba → señal alcista', tipo: 'favor' }); ptsUp += 2;
+            } else if (ema5.at(-2) >= ema12.at(-2) && ema5.at(-1) < ema12.at(-1)) {
+                razones.push({ texto: 'EMA5 acaba de cruzar EMA12 hacia abajo → señal bajista', tipo: 'contra' }); ptsDown += 2;
+            } else if (diff > 0) {
+                razones.push({ texto: `EMA5 > EMA12 (diferencia +${diff.toFixed(2)}) — tendencia alcista sostenida`, tipo: 'favor' }); ptsUp += 1;
+            } else {
+                razones.push({ texto: `EMA5 < EMA12 (diferencia ${diff.toFixed(2)}) — tendencia bajista sostenida`, tipo: 'contra' }); ptsDown += 1;
+            }
+        } else {
+            razones.push({ texto: `EMA: faltan datos (${data.length}/13)`, tipo: 'neutro' });
+        }
+
+        // ── 3. Bollinger ──
+        const boll = calcBollinger();
+        if (boll && data.length > 0) {
+            const last = data.at(-1), prev = data.at(-2);
+            if (prev >= boll.upper && last < boll.upper) { razones.push({ texto: 'Precio rebota desde banda superior de Bollinger → posible caída', tipo: 'contra' }); ptsDown += 2; }
+            else if (prev <= boll.lower && last > boll.lower) { razones.push({ texto: 'Precio rebota desde banda inferior de Bollinger → posible alza', tipo: 'favor' }); ptsUp += 2; }
+            else if (last > boll.upper) { razones.push({ texto: 'Precio fuera de banda superior → sobreextensión, precaución', tipo: 'contra' }); ptsDown += 1; }
+            else if (last < boll.lower) { razones.push({ texto: 'Precio fuera de banda inferior → posible rebote', tipo: 'favor' }); ptsUp += 1; }
+            else { razones.push({ texto: 'Precio dentro de bandas Bollinger — mercado en rango', tipo: 'neutro' }); }
+        } else {
+            razones.push({ texto: 'Bollinger: esperando más datos', tipo: 'neutro' });
+        }
+
+        // ── 4. MACD ──
+        if (data.length >= 27) {
+            const e12 = calcEma(data, 12), e26 = calcEma(data, 26);
+            const m = e12.map((v, i) => v - e26[i]);
+            const prev = m.at(-2), curr = m.at(-1);
+            if (prev < 0 && curr >= 0) { razones.push({ texto: 'MACD cruza cero al alza — impulso alcista confirmado', tipo: 'favor' }); ptsUp += 2; }
+            else if (prev > 0 && curr <= 0) { razones.push({ texto: 'MACD cruza cero a la baja — impulso bajista confirmado', tipo: 'contra' }); ptsDown += 2; }
+            else if (curr > 0) { razones.push({ texto: 'MACD positivo — tendencia alcista activa', tipo: 'favor' }); ptsUp += 1; }
+            else { razones.push({ texto: 'MACD negativo — tendencia bajista activa', tipo: 'contra' }); ptsDown += 1; }
+        } else {
+            razones.push({ texto: `MACD: necesita ${27 - data.length} puntos más`, tipo: 'neutro' });
+        }
+
+        // ── 5. Racha ──
+        const { n: rachan, dir: rachaDir } = calcRacha();
+        if (rachan >= 5) {
+            const msg = rachaDir === 'UP'
+                ? `Racha de ${rachan} alcistas seguidas — agotamiento probable, NO operar al alza`
+                : `Racha de ${rachan} bajistas seguidas — rebote probable pero alto riesgo`;
+            razones.push({ texto: msg, tipo: 'contra' }); ptsDown += 2;
+        } else if (rachan >= 3) {
+            const msg = rachaDir === 'UP'
+                ? `Racha de ${rachan} alcistas — posible continuación o agotamiento pronto`
+                : `Racha de ${rachan} bajistas — rebote posible, con cautela`;
+            razones.push({ texto: msg, tipo: 'neutro' });
+        }
+
+        // ── 6. Doji ──
+        if (candles.length > 0 && bodySize(candles.at(-1)) < 0.15) {
+            razones.push({ texto: 'Última vela es Doji — mercado indeciso, esperar confirmación antes de entrar', tipo: 'contra' }); ptsDown += 1;
+        }
+
+        // ── 7. Engulfing ──
+        if (candles.length >= 2) {
+            const c1 = candles.at(-2), c2 = candles.at(-1);
+            if (direction(c1)==='DOWN' && direction(c2)==='UP' && c2.open<=c1.close && c2.close>=c1.open) {
+                razones.push({ texto: 'Vela envolvente alcista — fuerte señal de entrada al alza', tipo: 'favor' }); ptsUp += 3;
+            } else if (direction(c1)==='UP' && direction(c2)==='DOWN' && c2.open>=c1.close && c2.close<=c1.open) {
+                razones.push({ texto: 'Vela envolvente bajista — fuerte señal de entrada a la baja', tipo: 'contra' }); ptsDown += 3;
+            }
+        }
+
+        // ── 8. Memoria IA — historial de patrones ──
+        const statsIA = calcularEstadisticasPatrones();
+        const totalIA = Object.values(statsIA).reduce((a, v) => a + v.total, 0);
+        if (totalIA >= 5) {
+            const upIA  = Object.values(statsIA).reduce((a, v) => a + v.up, 0);
+            const pctUp = Math.round(upIA / totalIA * 100);
+            if (pctUp >= 65)      { razones.push({ texto: `Memoria IA: ${pctUp}% de patrones históricos resolvieron al alza`, tipo: 'favor' }); ptsUp += 2; }
+            else if (pctUp <= 35) { razones.push({ texto: `Memoria IA: solo ${pctUp}% resolvieron al alza — historial bajista`, tipo: 'contra' }); ptsDown += 2; }
+            else                  { razones.push({ texto: `Memoria IA: ${pctUp}% alcista vs ${100-pctUp}% bajista — equilibrado`, tipo: 'neutro' }); }
+        } else {
+            razones.push({ texto: `Memoria IA: acumulando historial (${totalIA} patrones registrados)`, tipo: 'neutro' });
+        }
+
+        // ── 9. Markov — próximo color ──
+        const markovPred = prediccionMarkov();
+        if (markovPred && markovPred.prob > 50) {
+            const esAlcista = ['#6ceb52','#ed4ac7','#ffd700'].includes(markovPred.mejorColor);
+            const nombre = NOMBRES_COLOR[markovPred.mejorColor] || markovPred.mejorColor;
+            const msg = `Markov predice próximo color: ${nombre} (${markovPred.prob.toFixed(0)}%)`;
+            if (esAlcista) { razones.push({ texto: msg, tipo: 'favor' }); ptsUp += 1; }
+            else           { razones.push({ texto: msg, tipo: 'contra' }); ptsDown += 1; }
+        }
+
+        // ── 10. Figuras repetidas en memoria ──
+        const fig3 = detectarFigurasRepetidas(3, 2);
+        const fig5 = detectarFigurasRepetidas(5, 2);
+        if (fig3.length > 0 || fig5.length > 0) {
+            const pred = obtenerColorPredichoParaFigura(3) || obtenerColorPredichoParaFigura(5);
+            if (pred && pred.veces >= 2) {
+                const confianza = Math.round(pred.veces / pred.total * 100);
+                const esAlcista = ['#6ceb52','#ed4ac7','#ffd700'].includes(pred.color);
+                const nombre = NOMBRES_COLOR[pred.color] || pred.color;
+                const msg = `Figura repetida: históricamente viene ${nombre} (${confianza}% de veces)`;
+                if (confianza >= 65) { razones.push({ texto: msg, tipo: esAlcista ? 'favor' : 'contra' }); esAlcista ? ptsUp += 2 : ptsDown += 2; }
+                else { razones.push({ texto: msg + ' — confianza baja', tipo: 'neutro' }); }
+            }
+        }
+
+        // ── 11. Ventana de 15 minutos ──
+        const v15 = statsVentana(15 * 60 * 1000);
+        if (v15.total >= 4) {
+            const pct15 = Math.round(v15.alcistas / v15.total * 100);
+            if (pct15 >= 70)      { razones.push({ texto: `Últimos 15min: ${pct15}% alcista — momentum al alza`, tipo: 'favor' }); ptsUp += 1; }
+            else if (pct15 <= 30) { razones.push({ texto: `Últimos 15min: ${pct15}% alcista — momentum bajista`, tipo: 'contra' }); ptsDown += 1; }
+        }
+
+        // ── Calcular decisión final ──
+        const total = ptsUp + ptsDown || 1;
+        const pctUpFinal   = Math.round(ptsUp  / total * 100);
+        const pctDownFinal = Math.round(ptsDown / total * 100);
+
+        const favor  = razones.filter(r => r.tipo === 'favor').length;
+        const contra = razones.filter(r => r.tipo === 'contra').length;
+        const neutro = razones.filter(r => r.tipo === 'neutro').length;
+
+        // Score ponderado
+        const rsiVal     = rsi;
+        const probGlobal = totalIA >= 5 ? Math.round(Object.values(statsIA).reduce((a,v)=>a+v.up,0) / totalIA * 100) : 50;
+        const patActivos = checkPatterns();
+        const score      = calcScore(patActivos, rsiVal, probGlobal);
+
+        // Decisión
+        let nivel, titulo, subtitulo, emoji;
+        if (score >= 72 && favor >= contra + 2) {
+            nivel = 'verde-fuerte'; emoji = '🟢'; titulo = '¡BUENA ENTRADA!';
+            subtitulo = `${favor} indicadores a favor — Score ${score}/100 — Alta confianza`;
+        } else if (score >= 55 && favor > contra) {
+            nivel = 'verde'; emoji = '🟡'; titulo = 'ENTRADA MODERADA';
+            subtitulo = `${favor} a favor vs ${contra} en contra — Score ${score}/100 — Opera con cautela`;
+        } else if (score < 35 || contra >= favor + 3) {
+            nivel = 'rojo'; emoji = '🔴'; titulo = 'NO OPERAR AHORA';
+            subtitulo = `${contra} señales en contra — Score ${score}/100 — Esperar mejor momento`;
+        } else if (Math.abs(favor - contra) <= 1) {
+            nivel = 'amarillo'; emoji = '⚠️'; titulo = 'MERCADO INDECISO';
+            subtitulo = `${favor} a favor / ${contra} en contra / ${neutro} neutros — Esperar confirmación`;
+        } else {
+            nivel = 'amarillo'; emoji = '🟡'; titulo = 'SEÑAL DÉBIL';
+            subtitulo = `Score ${score}/100 — Condiciones mixtas, proceder con precaución`;
+        }
+
+        return { nivel, emoji, titulo, subtitulo, razones, favor, contra, neutro, score, pctUpFinal, pctDownFinal };
+    }
+
+    // ─── Renderizar resultado en el panel ────────────────────────────────
+    function renderizarDecision() {
+        // El cuadro visual se eliminó; se conservan solo las alertas de voz/sonido
+        const d = evaluarDecision();
+
+        // Sonido y vibración si hay entrada fuerte
+        if (d.nivel === 'verde-fuerte') {
+            playTono('fuerte'); vibrarSegun('fuerte');
+            notificarSistema('🟢 ¡BUENA ENTRADA!', d.subtitulo);
+            hablar(`¡Buena entrada! Score ${d.score} sobre cien. ${d.favor} señales a favor.`);
+        } else if (d.nivel === 'rojo' && d.contra >= 5) {
+            playTono('bajista'); vibrarSegun('debil');
+            hablar(`No operar. ${d.contra} señales en contra.`);
+        }
+    }
+
+    // ─── Enganchar al ciclo de velas ─────────────────────────────────────
+    const _addCandleConDecision = addCandleAuto;
+    addCandleAuto = function(v, color) {
+        _addCandleConDecision(v, color);
+        try { renderizarDecision(); } catch(e) { console.warn('Error en panel decisión:', e); }
+    };
+
+    // Render inicial
+    setTimeout(renderizarDecision, 100);
+
+    window.__hablar = hablar;   // lo usa analisis.js para los avisos de límites
+    // =====================================================================
+    // 💪 MÓDULO DE SEÑALES DE FUERZA — ALCISTAS Y BAJISTAS
+    // 12 señales: 6 alcistas + 6 bajistas, con voz, vibración y panel visual
+    // =====================================================================
+
+    // Anti-repetición de señales de fuerza (independiente del cooldown de voz)
+    const _fuerzaCache = {};
+    const FUERZA_COOLDOWN = 30000; // 30s entre la misma señal
+
+    function _puedeAvisarFuerza(clave) {
+        const ahora = Date.now();
+        if (_fuerzaCache[clave] && ahora - _fuerzaCache[clave] < FUERZA_COOLDOWN) return false;
+        _fuerzaCache[clave] = ahora;
+        return true;
+    }
+
+    // Contexto compartido — se calcula una vez por ciclo
+    function _contextoIA() {
+        const stats  = calcularEstadisticasPatrones();
+        const total  = Object.values(stats).reduce((a,v) => a+v.total, 0);
+        const up     = Object.values(stats).reduce((a,v) => a+v.up, 0);
+        const pct    = total > 0 ? Math.round(up/total*100) : 50;
+        return { iaAlc: pct >= 55, iaBaj: pct <= 45, pct, total };
+    }
+
+    // ── Mostrar señal de fuerza en pantalla ──────────────────────────────
+    function mostrarSenalFuerza({ titulo, tipo, mensaje, pct, voz }) {
+        const el = document.getElementById('panel-fuerza-activa');
+        if (!el) return;
+        const esAlc = tipo === 'alcista';
+        el.className = `fuerza-${tipo}`;
+        el.innerHTML = `
+            <div class="fza-badge">${esAlc ? '🚀' : '🔻'} ${tipo.toUpperCase()}</div>
+            <div class="fza-titulo">${titulo}</div>
+            <div class="fza-msg">${mensaje}</div>
+            <div class="fza-barra-wrap"><div class="fza-barra" style="width:${pct}%;background:${esAlc?'#00ff80':'#ff5050'}"></div></div>
+            <div class="fza-pct">${pct}% confianza</div>`;
+        el.classList.add('visible');
+        clearTimeout(el._t);
+        el._t = setTimeout(() => el.classList.remove('visible'), 9000);
+        hablar(voz, false);
+        playTono(esAlc ? 'fuerte' : 'bajista');
+        vibrarSegun(pct >= 85 ? 'alerta' : 'fuerte');
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // SEÑALES ALCISTAS
+    // ════════════════════════════════════════════════════════════════════
+
+    // 1. CONFLUENCIA ALCISTA TRIPLE (RSI + EMA + MACD)
+    function senalConfluenciaAlcista() {
+        if (data.length < 27 || candles.length < 8) return;
+        const rsi = calcRsi(7);
+        if (rsi >= 45) return;
+        const ema5 = calcEma(data,5), ema12 = calcEma(data,12);
+        if (ema5.at(-1) <= ema12.at(-1)) return;
+        const e12 = calcEma(data,12), e26 = calcEma(data,26);
+        const macd = e12.at(-1) - e26.at(-1);
+        if (macd <= 0) return;
+        if (!_puedeAvisarFuerza('conf_alc')) return;
+        mostrarSenalFuerza({
+            titulo: 'Confluencia alcista triple',
+            tipo: 'alcista',
+            mensaje: `RSI ${rsi.toFixed(0)} (sobreventa) + EMA cruzada al alza + MACD positivo`,
+            pct: 88,
+            voz: `¡Confluencia alcista! R S I, E M A y M A C D confirman subida. Alta probabilidad alcista. Puedes operar.`
+        });
+    }
+
+    // 2. REBOTE EN SOPORTE FUERTE CON MEMORIA IA
+    function senalReboteSoporte() {
+        if (data.length < 4) return;
+        const ctx2 = _contextoIA();
+        if (!ctx2.iaAlc || ctx2.total < 5) return;
+        const niveles = detectarNivelesSRAutomaticos();
+        const soportes = niveles.filter(n => n.tipo === 'soporte' && n.toques >= 3);
+        if (soportes.length === 0) return;
+        const precio = data.at(-1);
+        const cercano = soportes.find(s => Math.abs(precio - s.nivel) <= Math.abs(s.nivel)*0.05+0.4);
+        if (!cercano) return;
+        if (!_puedeAvisarFuerza(`rebote_sop_${cercano.nivel.toFixed(1)}`)) return;
+        mostrarSenalFuerza({
+            titulo: 'Rebote en soporte con Memoria IA',
+            tipo: 'alcista',
+            mensaje: `Soporte ${cercano.nivel.toFixed(1)} tocado ${cercano.toques}× · IA ${ctx2.pct}% alcista`,
+            pct: 82,
+            voz: `Soporte fuerte en ${cercano.nivel.toFixed(1)}, tocado ${cercano.toques} veces. Memoria confirma alcista. Buena entrada al alza.`
+        });
+    }
+
+    // 3. VELA ENVOLVENTE ALCISTA
+    function senalEngulfingAlcista() {
+        if (candles.length < 2) return;
+        const c1 = candles.at(-2), c2 = candles.at(-1);
+        if (direction(c1) !== 'DOWN' || direction(c2) !== 'UP') return;
+        if (!(c2.open <= c1.close && c2.close >= c1.open)) return;
+        if (!_puedeAvisarFuerza('engulf_alc')) return;
+        const ctx2 = _contextoIA();
+        mostrarSenalFuerza({
+            titulo: 'Vela envolvente alcista',
+            tipo: 'alcista',
+            mensaje: `Compradores engullen la vela bajista anterior · IA ${ctx2.pct}% alcista`,
+            pct: 76,
+            voz: `Vela envolvente alcista. Compradores tomaron control total. Señal de entrada al alza.`
+        });
+    }
+
+    // 4. PATRÓN REPETIDO CON CONFIANZA 65%+ (Memoria IA)
+    function senalPatronRepetidoAlcista() {
+        if (memoriaVelas.length < 8) return;
+        const pred3 = obtenerColorPredichoParaFigura(3);
+        const pred5 = obtenerColorPredichoParaFigura(5);
+        const pred = (pred5 && pred5.prob >= 65) ? pred5 : (pred3 && pred3.prob >= 65) ? pred3 : null;
+        if (!pred) return;
+        const esAlc = ['#6ceb52','#ed4ac7','#ffd700'].includes(pred.color);
+        if (!esAlc) return;
+        const fig = detectarFigurasRepetidas(pred5 ? 5 : 3, 3);
+        if (fig.length === 0) return;
+        const veces = fig[0][1];
+        if (veces < 3) return;
+        const pct = Math.round(pred.veces / pred.total * 100);
+        if (!_puedeAvisarFuerza(`patron_alc_${pred.color}`)) return;
+        const nombre = (NOMBRES_COLOR[pred.color]||'').replace(/[🔴🍷🟩🩷💛]/g,'').trim();
+        mostrarSenalFuerza({
+            titulo: 'Patrón repetido alcista (Memoria IA)',
+            tipo: 'alcista',
+            mensaje: `Figura repetida ${veces}× · Próximo color ${nombre} con ${pct}% confianza`,
+            pct,
+            voz: `Patrón repetido de la memoria. Probable color ${nombre} con ${pct} por ciento de confianza. Posible entrada.`
+        });
+    }
+
+    // 5. DIVERGENCIA ALCISTA RSI
+    function senalDivergenciaAlcista() {
+        if (data.length < 12 || candles.length < 12) return;
+        // Buscar mínimos locales en precio y RSI en las últimas 12 velas
+        let minPrecioIdx = 0, minPrecioVal = Infinity;
+        let minRsiIdx = 0, minRsiVal = Infinity;
+        for (let i = data.length - 12; i < data.length - 2; i++) {
+            if (data[i] < minPrecioVal) { minPrecioVal = data[i]; minPrecioIdx = i; }
+        }
+        const rsiHist = [];
+        for (let i = Math.max(0, data.length-20); i < data.length; i++) {
+            const sl = candles.slice(Math.max(0,i-7), i+1);
+            if (sl.length < 4) { rsiHist.push(50); continue; }
+            let g=0,l=0;
+            for (let j=1;j<sl.length;j++){const d=sl[j].close-sl[j-1].close; if(d>0)g+=d; else l-=d;}
+            rsiHist.push(100-100/(1+(g/(l||0.001))));
+        }
+        const rsiActual = rsiHist.at(-1);
+        const rsiAnterior = rsiHist.at(-4) || 50;
+        const precioActual = data.at(-1);
+        const precioAnterior = data.at(-4) || precioActual;
+        // Divergencia: precio hace nuevo mínimo pero RSI no
+        if (precioActual < precioAnterior && rsiActual > rsiAnterior && rsiActual < 50) {
+            if (!_puedeAvisarFuerza('diverg_alc')) return;
+            mostrarSenalFuerza({
+                titulo: 'Divergencia alcista RSI',
+                tipo: 'alcista',
+                mensaje: `Precio baja → RSI sube · Impulso bajista agotado · RSI ${rsiActual.toFixed(0)}`,
+                pct: 78,
+                voz: `Divergencia alcista detectada. El precio baja pero el impulso sube. Señal de reversión al alza. Atención.`
+            });
+        }
+    }
+
+    // 6. MOMENTUM ACELERADO ALCISTA (3 velas alcistas con cuerpos crecientes)
+    function senalMomentumAlcista() {
+        if (candles.length < 4) return;
+        const ult = candles.slice(-4);
+        const dirs = ult.map(c => direction(c));
+        if (!dirs.slice(1).every(d => d === 'UP')) return;
+        const cuerpos = ult.slice(1).map(c => Math.abs(c.close - c.open));
+        if (!(cuerpos[0] < cuerpos[1] && cuerpos[1] < cuerpos[2])) return;
+        const { n: rachaN } = calcRacha();
+        if (rachaN < 3) return;
+        if (!_puedeAvisarFuerza('momentum_alc')) return;
+        mostrarSenalFuerza({
+            titulo: 'Momentum alcista acelerado',
+            tipo: 'alcista',
+            mensaje: `3 velas alcistas con fuerza creciente · Racha de ${rachaN} velas`,
+            pct: 72,
+            voz: `Momentum alcista acelerado. Tres velas verdes con fuerza creciente. Tendencia al alza activa.`
+        });
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // SEÑALES BAJISTAS
+    // ════════════════════════════════════════════════════════════════════
+
+    // 7. CONFLUENCIA BAJISTA TRIPLE
+    function senalConfluenciaBajista() {
+        if (data.length < 27 || candles.length < 8) return;
+        const rsi = calcRsi(7);
+        if (rsi <= 55) return;
+        const ema5 = calcEma(data,5), ema12 = calcEma(data,12);
+        if (ema5.at(-1) >= ema12.at(-1)) return;
+        const e12 = calcEma(data,12), e26 = calcEma(data,26);
+        const macd = e12.at(-1) - e26.at(-1);
+        if (macd >= 0) return;
+        if (!_puedeAvisarFuerza('conf_baj')) return;
+        mostrarSenalFuerza({
+            titulo: 'Confluencia bajista triple',
+            tipo: 'bajista',
+            mensaje: `RSI ${rsi.toFixed(0)} (sobrecompra) + EMA cruzada a la baja + MACD negativo`,
+            pct: 88,
+            voz: `¡Confluencia bajista! R S I, E M A y M A C D confirman caída. No operar al alza. Alta probabilidad bajista.`
+        });
+    }
+
+    // 8. REBOTE EN RESISTENCIA CON MEMORIA IA
+    function senalReboteResistencia() {
+        if (data.length < 4) return;
+        const ctx2 = _contextoIA();
+        if (!ctx2.iaBaj || ctx2.total < 5) return;
+        const niveles = detectarNivelesSRAutomaticos();
+        const resis = niveles.filter(n => n.tipo === 'resistencia' && n.toques >= 3);
+        if (resis.length === 0) return;
+        const precio = data.at(-1);
+        const cercana = resis.find(r => Math.abs(precio - r.nivel) <= Math.abs(r.nivel)*0.05+0.4);
+        if (!cercana) return;
+        if (!_puedeAvisarFuerza(`rebote_res_${cercana.nivel.toFixed(1)}`)) return;
+        mostrarSenalFuerza({
+            titulo: 'Rebote en resistencia con Memoria IA',
+            tipo: 'bajista',
+            mensaje: `Resistencia ${cercana.nivel.toFixed(1)} tocada ${cercana.toques}× · IA ${ctx2.pct}% bajista`,
+            pct: 83,
+            voz: `Resistencia fuerte en ${cercana.nivel.toFixed(1)}, tocada ${cercana.toques} veces. Memoria confirma rechazo. No operar al alza.`
+        });
+    }
+
+    // 9. VELA ENVOLVENTE BAJISTA
+    function senalEngulfingBajista() {
+        if (candles.length < 2) return;
+        const c1 = candles.at(-2), c2 = candles.at(-1);
+        if (direction(c1) !== 'UP' || direction(c2) !== 'DOWN') return;
+        if (!(c2.open >= c1.close && c2.close <= c1.open)) return;
+        if (!_puedeAvisarFuerza('engulf_baj')) return;
+        const ctx2 = _contextoIA();
+        mostrarSenalFuerza({
+            titulo: 'Vela envolvente bajista',
+            tipo: 'bajista',
+            mensaje: `Vendedores engullen la vela alcista anterior · IA ${ctx2.pct}% bajista`,
+            pct: 76,
+            voz: `Vela envolvente bajista. Vendedores tomaron control total. No operar al alza. Señal de caída.`
+        });
+    }
+
+    // 10. RACHA + AGOTAMIENTO CONFIRMADO
+    function senalAgotamientoAlcista() {
+        if (candles.length < 6) return;
+        const { n: rachaN, dir: rachaDir } = calcRacha();
+        if (rachaDir !== 'UP' || rachaN < 5) return;
+        const rsi = calcRsi(7);
+        if (rsi < 65) return;
+        const niveles = detectarNivelesSRAutomaticos();
+        const resis = niveles.filter(n => n.tipo === 'resistencia');
+        const precio = data.at(-1);
+        const enResis = resis.some(r => Math.abs(precio - r.nivel) <= Math.abs(r.nivel)*0.06+0.5);
+        if (!_puedeAvisarFuerza('agotamiento_alc')) return;
+        const extra = enResis ? ' y precio en resistencia' : '';
+        mostrarSenalFuerza({
+            titulo: 'Agotamiento alcista',
+            tipo: 'bajista',
+            mensaje: `Racha de ${rachaN} velas alcistas · RSI ${rsi.toFixed(0)}${extra}`,
+            pct: 74,
+            voz: `Alerta de agotamiento alcista. Racha de ${rachaN} velas con R S I alto${extra}. No operar al alza. Posible reversión.`
+        });
+    }
+
+    // 11. DIVERGENCIA BAJISTA RSI
+    function senalDivergenciaBajista() {
+        if (data.length < 12 || candles.length < 12) return;
+        const rsiActual = calcRsi(7);
+        const rsiAnterior = (() => {
+            const sl = candles.slice(-11, -4);
+            if (sl.length < 4) return 50;
+            let g=0,l=0;
+            for(let i=1;i<sl.length;i++){const d=sl[i].close-sl[i-1].close;if(d>0)g+=d;else l-=d;}
+            return 100-100/(1+(g/(l||0.001)));
+        })();
+        const precioActual = data.at(-1);
+        const precioAnterior = data.at(-7) || precioActual;
+        // Divergencia: precio hace nuevo máximo pero RSI no
+        if (precioActual > precioAnterior && rsiActual < rsiAnterior && rsiActual > 50) {
+            if (!_puedeAvisarFuerza('diverg_baj')) return;
+            mostrarSenalFuerza({
+                titulo: 'Divergencia bajista RSI',
+                tipo: 'bajista',
+                mensaje: `Precio sube → RSI baja · Impulso alcista agotado · RSI ${rsiActual.toFixed(0)}`,
+                pct: 77,
+                voz: `Divergencia bajista detectada. El precio sube pero el impulso baja. Señal de reversión. Precaución al alza.`
+            });
+        }
+    }
+
+    // 12. RUPTURA DE SOPORTE CONFIRMADA
+    function senalRupturaSoporte() {
+        if (data.length < 3) return;
+        const precio = data.at(-1);
+        const precioAnterior = data.at(-2);
+        const niveles = detectarNivelesSRAutomaticos();
+        const soportes = niveles.filter(n => n.tipo === 'soporte' && n.toques >= 3);
+        const roto = soportes.find(s => precioAnterior >= s.nivel && precio < s.nivel - (Math.abs(s.nivel)*0.02+0.2));
+        if (!roto) return;
+        const cuerpoRuptura = candles.length > 0 ? Math.abs(candles.at(-1).close - candles.at(-1).open) : 0;
+        const cuerpoMedio   = candles.length > 4 ? candles.slice(-5).reduce((a,c) => a+Math.abs(c.close-c.open), 0)/5 : 1;
+        if (cuerpoRuptura < cuerpoMedio * 0.4) return; // cuerpo muy pequeño = no confirma
+        if (!_puedeAvisarFuerza(`ruptura_sop_${roto.nivel.toFixed(1)}`)) return;
+        mostrarSenalFuerza({
+            titulo: '¡Ruptura de soporte!',
+            tipo: 'bajista',
+            mensaje: `Soporte ${roto.nivel.toFixed(1)} (${roto.toques} toques) roto con vela de fuerza`,
+            pct: 85,
+            voz: `¡Soporte roto en ${roto.nivel.toFixed(1)}! Señal bajista muy fuerte. No operar al alza. El soporte ahora es resistencia.`
+        });
+    }
+
+    // ── Evaluar todas las señales de fuerza en cada nueva vela ───────────
+    function evaluarSenalesFuerza() {
+        try { senalConfluenciaAlcista(); }   catch(e) {}
+        try { senalReboteSoporte(); }        catch(e) {}
+        try { senalEngulfingAlcista(); }     catch(e) {}
+        try { senalPatronRepetidoAlcista(); } catch(e) {}
+        try { senalDivergenciaAlcista(); }   catch(e) {}
+        try { senalMomentumAlcista(); }      catch(e) {}
+        try { senalConfluenciaBajista(); }   catch(e) {}
+        try { senalReboteResistencia(); }    catch(e) {}
+        try { senalEngulfingBajista(); }     catch(e) {}
+        try { senalAgotamientoAlcista(); }   catch(e) {}
+        try { senalDivergenciaBajista(); }   catch(e) {}
+        try { senalRupturaSoporte(); }       catch(e) {}
+    }
+
+    // ── Panel flotante de señal activa ────────────────────────────────────
+    (function crearPanelFuerza() {
+        const el = document.createElement('div');
+        el.id = 'panel-fuerza-activa';
+        document.body.appendChild(el);
+    })();
+
+    // ── Enganchar al ciclo de velas ───────────────────────────────────────
+    const _addCandleConFuerza = addCandleAuto;
+    addCandleAuto = function(v, color) {
+        _addCandleConFuerza(v, color);
+        try { evaluarSenalesFuerza(); } catch(e) { console.warn('Error señales fuerza:', e); }
+    };
+
+    evaluarSenalesFuerza(); // evaluación inicial
+
+
+
+    // =====================================================================
+    // 🩷 RADAR DE ENTRADAS CLAVE (ROSA / DORADA) SEGÚN LA MEMORIA
+    // Compara las últimas velas con la memoria: si esa misma figura ya
+    // ocurrió antes y después vino una Rosa (o Dorada), avisa por mensaje
+    // y por voz. También avisa si ya va el tiempo típico entre rosas.
+    // =====================================================================
+    const RADAR_OBJETIVOS = [
+        { color: '#ed4ac7', nombre: 'ROSA',   emoji: '🩷' },
+        { color: '#ffd700', nombre: 'DORADA', emoji: '💛' }
+    ];
+    const RADAR_VENTANAS = [5, 4, 3];          // se prueba de la figura más larga a la más corta
+    const RADAR_MIN_REP  = { 5: 2, 4: 2, 3: 3 }; // veces mínimas que debe haberse visto la figura
+    const RADAR_PCT_MIN  = 50;                 // % mínimo de veces que después vino el color
+
+    (function crearAvisoRadar() {
+        const d = document.createElement('div');
+        d.id = 'aviso-radar';
+        document.body.appendChild(d);
+    })();
+
+    // ¿La figura actual ya se vio antes y qué vino después?
+    function radarAnalizarPatron(obj) {
+        const mem = memoriaVelas.map(firmaVela);
+        for (const v of RADAR_VENTANAS) {
+            if (mem.length < v + 2) continue;
+            const actual = mem.slice(-v).join('-');
+            let n = 0, k = 0;
+            for (let i = 0; i <= mem.length - v - 1; i++) {
+                if (mem.slice(i, i + v).join('-') === actual) {
+                    n++;
+                    if (mem[i + v] === obj.color) k++;
+                }
+            }
+            const pct = n ? Math.round(k / n * 100) : 0;
+            if (n >= RADAR_MIN_REP[v] && k > 0 && pct >= RADAR_PCT_MIN) return { ventana: v, n, k, pct };
+        }
+        return null;
+    }
+
+    // ¿Ya van las velas típicas entre una aparición y la siguiente?
+    function radarAnalizarCiclo(obj) {
+        const mem = memoriaVelas.map(firmaVela);
+        const idx = [];
+        mem.forEach((c, i) => { if (c === obj.color) idx.push(i); });
+        if (idx.length < 2) return null;
+        const gaps = idx.slice(1).map((x, j) => x - idx[j]);
+        const prom = Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length);
+        const desde = mem.length - 1 - idx[idx.length - 1];
+        if (prom < 5 || desde === 0) return null;
+        if (Math.abs(desde - prom) <= 2) return { desde, prom };
+        return null;
+    }
+
+    let _radarUltimaClave = '';
+
+    function evaluarRadar() {
+        const aviso = document.getElementById('aviso-radar');
+        if (!aviso) return;
+        if (memoriaVelas.length < 8) { aviso.classList.remove('visible'); return; }
+
+        const hallazgos = [];
+        RADAR_OBJETIVOS.forEach(obj => {
+            const p = radarAnalizarPatron(obj);
+            const c = radarAnalizarCiclo(obj);
+            if (p || c) hallazgos.push({ obj, p, c });
+        });
+
+        if (hallazgos.length === 0) {
+            aviso.classList.remove('visible');
+            _radarUltimaClave = '';
+            return;
+        }
+
+        // Primero los que tienen patrón repetido (y ambos motivos); luego Rosa antes que Dorada
+        hallazgos.sort((a, b) => ((b.p ? 2 : 0) + (b.c ? 1 : 0)) - ((a.p ? 2 : 0) + (a.c ? 1 : 0)));
+        const lineas = [];
+        hallazgos.forEach(h => {
+            if (h.p) lineas.push(`${h.obj.emoji} Patrón repetido de ${h.p.ventana} velas (visto ${h.p.n} veces): en ${h.p.k} de ${h.p.n} vino ${h.obj.nombre} (${h.p.pct}%) → posible entrada ${h.obj.nombre}`);
+            if (h.c) lineas.push(`⏱ Van ${h.c.desde} velas desde la última ${h.obj.nombre.toLowerCase()}; suele repetirse cada ~${h.c.prom}`);
+        });
+
+        const principal = hallazgos[0];
+        const fuerte = !!(principal.p && principal.c);
+        aviso.innerHTML = lineas.join('<br>');
+        aviso.style.background = principal.obj.color + 'dd';
+        aviso.style.boxShadow = `0 0 25px ${principal.obj.color}`;
+        aviso.style.color = principal.obj.color === '#ffd700' ? '#111' : '#fff';
+        aviso.classList.add('visible');
+        clearTimeout(aviso._timeout);
+        aviso._timeout = setTimeout(() => aviso.classList.remove('visible'), 12000);
+
+        const clave = lineas.join('|');
+        if (clave !== _radarUltimaClave) {
+            _radarUltimaClave = clave;
+            const nombre = principal.obj.nombre.toLowerCase();
+            let voz;
+            if (principal.p) voz = `Patrón repetido. Posible entrada ${nombre}. En ${principal.p.k} de ${principal.p.n} veces vino ${nombre}.`;
+            else             voz = `Van ${principal.c.desde} velas desde la última ${nombre}. Suele repetirse cada ${principal.c.prom}.`;
+            hablar(voz, fuerte || !!principal.p);
+            playTono(fuerte ? 'fuerte' : 'alcista');
+            if (fuerte) vibrarSegun('alerta');
+        }
+    }
+
+    const _addCandleConRadar = addCandleAuto;
+    addCandleAuto = function(v, color) {
+        _addCandleConRadar(v, color);
+        try { evaluarRadar(); } catch (e) { console.warn('Error en radar rosa:', e); }
+    };
 
 }); // 👈 ESTA ES LA ÚLTIMA LÍNEA DEL ARCHIVO
 

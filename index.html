@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Masaniello Conectado</title>
+  <title>Analizador Grafico</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -21,6 +21,39 @@
       <button id="win-bet" class="green">✅ Win</button>
       <button id="lose-bet" class="red">❌ Lose</button>
       <button id="reset" class="yellow">Reset</button>
+    </div>
+
+    <!-- PANEL CICLO DE VELAS -->
+    <div id="panel-ciclo-velas">
+      <h3>🔁 Rastreador de Ciclo de Velas</h3>
+      <p class="ciclo-desc">Marca cuando aparece una vela clave y configura después de cuántas velas puede repetirse. Recibirás un aviso de voz cuando se acerque ese momento.</p>
+
+      <div class="ciclo-config">
+        <input id="ciclo-nombre" type="text" placeholder="Nombre (ej: Rosa alta, Dorada fuerte…)" maxlength="40" />
+        <select id="ciclo-color">
+          <option value="#ed4ac7">🩷 Rosa</option>
+          <option value="#ffd700">💛 Dorada</option>
+          <option value="#6ceb52">🟩 Verde</option>
+          <option value="#ba1428">🔴 Roja débil</option>
+          <option value="#8b0000">🍷 Roja vino</option>
+          <option value="#ffffff">⚪ Otra</option>
+        </select>
+        <div class="ciclo-num-wrap">
+          <label>Velas hasta repetición:</label>
+          <input id="ciclo-velas" type="number" min="1" max="200" value="25" />
+          <div class="ciclo-presets">
+            <button class="ciclo-preset" data-v="10">10</button>
+            <button class="ciclo-preset" data-v="13">13</button>
+            <button class="ciclo-preset" data-v="20">20</button>
+            <button class="ciclo-preset" data-v="25">25</button>
+            <button class="ciclo-preset" data-v="30">30</button>
+            <button class="ciclo-preset" data-v="40">40</button>
+          </div>
+        </div>
+        <button id="ciclo-marcar" class="ciclo-btn-marcar">📌 Marcar ahora</button>
+      </div>
+
+      <div id="ciclo-lista"></div>
     </div>
 
     <!-- GRÁFICOS -->
@@ -67,7 +100,7 @@
       </div>
 
       <div class="entrada">
-        <button id="btn11" class="blue">Entrada B</button>2
+        <button id="btn11" class="blue">Entrada B</button>
         <strong id="proxima-entrada2">--:--:--</strong>
       </div>
 
@@ -95,25 +128,6 @@
       <div class="memoria-stat"><span>Prob. Bajista global:</span> <strong id="mem-prob-down" class="prob-down">--%</strong></div>
     </div>
 
-    <div class="memoria-tabla-wrapper">
-      <table id="tabla-patrones">
-        <thead>
-          <tr><th>Patrón</th><th>Veces</th><th>% Alcista</th><th>% Bajista</th></tr>
-        </thead>
-        <tbody id="tabla-patrones-body"></tbody>
-      </table>
-    </div>
-
-    <div class="memoria-figuras">
-      <h4>🔁 Secuencias de 3 colores repetidas</h4>
-      <ul id="lista-figuras-repetidas"></ul>
-    </div>
-
-    <div class="memoria-figuras">
-      <h4>🔁 Secuencias de 5 colores repetidas</h4>
-      <ul id="lista-figuras-repetidas-5"></ul>
-    </div>
-
     <p class="memoria-disclaimer">Estadísticas basadas en patrones históricos detectados en esta memoria. No garantizan resultados futuros.</p>
 
     <button id="btn-reset-memoria" class="gris2">🗑️ Borrar Memoria IA</button>
@@ -126,5 +140,7 @@
   <div id="aviso-figura-repetida"></div>
 
   <script src="script.js"></script>
+  <script src="auto_velas.js"></script>
+  <script src="analisis.js"></script>
 </body>
 </html>
