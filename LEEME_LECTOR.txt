@@ -1,5 +1,16 @@
-GRAFICADOR RS23 — LECTOR AUTOMÁTICO SIN TAMPERMONKEY (v5.0)
+GRAFICADOR RS23 — LECTOR AUTOMÁTICO SIN TAMPERMONKEY (v5.1)
 =============================================================
+
+NOVEDAD v5.1 — VALORES DE 100x Y DE 1000x O MÁS
+   • Antes los valores con separador de miles (1,234.56x · 1.234,56x · 1 234.56x) el lector los descartaba,
+     y la app los habría leído mal (1.23x). Ahora se leen bien, sea cual sea el formato del juego.
+   • En el Gráfico de Secuencia, los valores ≥100x llevan un anillo NARANJA y los ≥1000x un doble anillo
+     DORADO, con su valor escrito (ej. 1,234.56x). El panel "Último" también los marca.
+   • IMPORTANTE para que funcione: además de subir los archivos de la app a GitHub, hay que RECARGAR LA
+     EXTENSIÓN (chrome://extensions → botón ⟳ en "Lector Aviator — Graficador RS23"), porque la lectura
+     del juego vive en la extensión (lector_extension/lector-juego.js). Luego recarga el juego y la app (F5).
+
+---------------------------------------------------------------------------
 
 QUÉ CAMBIÓ
    Antes, cada computadora nueva necesitaba instalar Tampermonkey y pegar el

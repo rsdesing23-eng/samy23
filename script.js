@@ -38,6 +38,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let seqView = 50;               // puntos visibles a la vez
     let seqOffset = 0;              // 0 = lo más reciente; >0 = mirando valores anteriores
     const esGrande = c => c === '#ed4ac7' || c === '#8b0000';   // rosa y vino se dibujan más grandes
+    // Valores muy altos: 1 = ≥100x (naranja) · 2 = ≥1000x (dorado) · 0 = normal
+    const nivelAlto = v => (v >= 1000 ? 2 : v >= 100 ? 1 : 0);
+    const fmtMult = v => Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + 'x';   // 1,234.56x
 
     function drawChart() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -113,22 +116,40 @@ document.addEventListener('DOMContentLoaded', function() {
             ctx.shadowBlur = 15;
             ctx.fill();
             ctx.shadowBlur = 0;
+
+            // ≥100x: anillo naranja · ≥1000x: doble anillo dorado (se ven al instante)
+            const nvAlto = nivelAlto(labels[i]);
+            if (nvAlto) {
+                const rBase = esGrande(color) ? 10 : 6;
+                const colAlto = nvAlto === 2 ? '#ffe600' : '#ff9f1a';
+                ctx.save();
+                ctx.strokeStyle = colAlto; ctx.shadowColor = colAlto; ctx.shadowBlur = 18;
+                ctx.lineWidth = nvAlto === 2 ? 3 : 2;
+                ctx.beginPath(); ctx.arc(x, y, rBase + 6, 0, Math.PI * 2); ctx.stroke();
+                if (nvAlto === 2) { ctx.beginPath(); ctx.arc(x, y, rBase + 12, 0, Math.PI * 2); ctx.stroke(); }
+                ctx.restore();
+            }
         }
 
         // Valor real (multiplicador) en cada punto
         const stepX = vN > 1 ? chartWidth / (vN - 1) : chartWidth;
-        const vertical = stepX < 42;
+        let hayAltos = false;                                   // las etiquetas largas (1,234.56x) van en vertical
+        for (let i = vStart; i < vEnd; i++) if (nivelAlto(labels[i])) { hayAltos = true; break; }
+        const vertical = stepX < (hayAltos ? 80 : 42);
         ctx.font = (vertical ? 'bold 10px' : 'bold 12px') + ' sans-serif';
         for (let i = vStart; i < vEnd; i++) {
             const p = data[i];
             if (labels[i] == null) continue;
             const x = xOf(i);
             const y = margin + chartHeight - ((p - minY) / yRange) * chartHeight;
-            const dy = esGrande(colors[i]) ? 5 : 0;      // el punto grande necesita la etiqueta más separada
-            const txt = Number(labels[i]).toFixed(2) + 'x';
-            const col = labels[i] >= 10 ? '#ff6ee0' : labels[i] >= 2 ? '#b98cff' : '#5cc8ff';
-            const abajo = y < margin + 46 + dy;           // si no cabe arriba, va debajo del punto
+            const nv = nivelAlto(labels[i]);
+            const dy = (esGrande(colors[i]) ? 5 : 0) + (nv === 2 ? 12 : nv === 1 ? 6 : 0);   // punto grande / anillo: etiqueta más separada
+            const txt = nv ? fmtMult(labels[i]) : Number(labels[i]).toFixed(2) + 'x';
+            const col = nv === 2 ? '#ffe600' : nv === 1 ? '#ff9f1a'
+                      : labels[i] >= 10 ? '#ff6ee0' : labels[i] >= 2 ? '#b98cff' : '#5cc8ff';
+            const abajo = y < margin + (nv ? 72 : 46) + dy;           // si no cabe arriba, va debajo del punto
             ctx.save();
+            if (nv) ctx.font = (vertical ? 'bold 11px' : 'bold 13px') + ' sans-serif';
             ctx.fillStyle = col;
             ctx.shadowColor = '#000'; ctx.shadowBlur = 3;
             if (vertical) {

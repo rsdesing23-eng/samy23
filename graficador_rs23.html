@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Analizador Grafico</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div id="contenedor-principal">
+
+    <!-- PANEL MASANIELLO -->
+    <div id="panel-masaniello">
+      <h2>RICARDO DAVID23</h2>
+
+      <label>Capital inicial:</label>
+      <input id="capital" type="number" placeholder="0.00" />
+      <button id="generate-bet">Generar Apuesta</button>
+      <div class="mini-display"><span>Apuesta actual:</span> <strong id="bet-amount">-</strong></div>
+      <div class="mini-display"><span>Meta de sesión:</span> <strong id="session-goal">-</strong></div>
+      <button id="win-bet" class="green">✅ Win</button>
+      <button id="lose-bet" class="red">❌ Lose</button>
+      <button id="reset" class="yellow">Reset</button>
+    </div>
+
+    <!-- PANEL CICLO DE VELAS -->
+    <div id="panel-ciclo-velas">
+      <h3>🔁 Rastreador de Ciclo de Velas</h3>
+      <p class="ciclo-desc">Marca cuando aparece una vela clave y configura después de cuántas velas puede repetirse. Recibirás un aviso de voz cuando se acerque ese momento.</p>
+
+      <div class="ciclo-config">
+        <input id="ciclo-nombre" type="text" placeholder="Nombre (ej: Rosa alta, Dorada fuerte…)" maxlength="40" />
+        <select id="ciclo-color">
+          <option value="#ed4ac7">🩷 Rosa</option>
+          <option value="#ffd700">💛 Dorada</option>
+          <option value="#6ceb52">🟩 Verde</option>
+          <option value="#ba1428">🔴 Roja débil</option>
+          <option value="#8b0000">🍷 Roja vino</option>
+          <option value="#ffffff">⚪ Otra</option>
+        </select>
+        <div class="ciclo-num-wrap">
+          <label>Velas hasta repetición:</label>
+          <input id="ciclo-velas" type="number" min="1" max="200" value="25" />
+          <div class="ciclo-presets">
+            <button class="ciclo-preset" data-v="10">10</button>
+            <button class="ciclo-preset" data-v="13">13</button>
+            <button class="ciclo-preset" data-v="20">20</button>
+            <button class="ciclo-preset" data-v="25">25</button>
+            <button class="ciclo-preset" data-v="30">30</button>
+            <button class="ciclo-preset" data-v="40">40</button>
+          </div>
+        </div>
+        <button id="ciclo-marcar" class="ciclo-btn-marcar">📌 Marcar ahora</button>
+      </div>
+
+      <div id="ciclo-lista"></div>
+    </div>
+
+    <!-- GRÁFICOS -->
+    <div id="charts-section">
+      <div class="chart-title">Gráfico de Secuencia</div>
+      <div class="chart-wrapper">
+        <canvas id="chart" width="1200" height="400"></canvas>
+      </div>
+
+      <!-- Mensaje central -->
+      <div id="pattern-center-message">🟢 Esperando detección de patrón...</div>
+
+      <div class="chart-title">Gráfico de Velas</div>
+      <div class="chart-wrapper">
+        <canvas id="candlestick-chart" width="1200" height="350"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PANEL DE CONTROLES -->
+  <div id="panel-botones">
+    <h3>Controles</h3>
+
+    <div class="fila-botones">
+      <button id="btn1" class="rojo1">-2</button>
+      <button id="btn13" class="rojo2">→=1</button>
+      <button id="btn2" class="verde1">+2 V</button>
+      <button id="btn9" class="rosa1">+10 Rosa</button>
+      <button id="btn10" class="oro1">+4 Dorado</button>
+      <button id="btn3" class="gris1">⟲ Undo</button>
+      <button id="btn4" class="gris2">⟲ Reset</button>
+      <button id="btn5" class="hr rojo">RESISTENCIA</button>
+      <button id="btn6" class="hr verde">SOPORTE</button>
+      <button id="btn12" class="hr amarillo">ZONA CERO</button>
+      <button id="btn7" class="hr borrar">Borrar</button>
+    </div>
+
+    <!-- Entradas + Reloj -->
+    <div class="panel-tiempo">
+      <div class="entrada">
+        <button id="btn8" class="blue">Entrada A</button>
+        <strong id="proxima-entrada1">--:--:--</strong>
+      </div>
+
+      <div class="entrada">
+        <button id="btn11" class="blue">Entrada B</button>
+        <strong id="proxima-entrada2">--:--:--</strong>
+      </div>
+
+      <div class="reloj-control" id="reloj-dinamico">
+        <div>
+          <span>Hora actual:</span>
+          <strong id="time">--:--:--</strong>
+        </div>
+        <div id="trend-counter">
+          📈 Tendencia: <strong id="trend-status">Estable</strong><br>
+          <span id="trend-details">Altas: 0 | Bajas: 0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL MEMORIA IA DEL MERCADO -->
+  <div id="panel-memoria-ia">
+    <h3>🧠 Memoria IA del Mercado</h3>
+
+    <div class="memoria-resumen">
+      <div class="memoria-stat"><span>Velas en memoria:</span> <strong id="mem-candle-count">0</strong></div>
+      <div class="memoria-stat"><span>Patrones registrados:</span> <strong id="mem-pattern-count">0</strong></div>
+      <div class="memoria-stat"><span>Prob. Alcista global:</span> <strong id="mem-prob-up" class="prob-up">--%</strong></div>
+      <div class="memoria-stat"><span>Prob. Bajista global:</span> <strong id="mem-prob-down" class="prob-down">--%</strong></div>
+    </div>
+
+    <p class="memoria-disclaimer">Estadísticas basadas en patrones históricos detectados en esta memoria. No garantizan resultados futuros.</p>
+
+    <button id="btn-reset-memoria" class="gris2">🗑️ Borrar Memoria IA</button>
+  </div>
+
+  <!-- Mensajes flotantes -->
+  <div id="signal-message">Señales…</div>
+  <div id="signal-message-bottom"></div>
+  <div id="pattern-summary"></div>
+  <div id="aviso-figura-repetida"></div>
+
+  <script src="script.js"></script>
+  <script src="auto_velas.js"></script>
+  <script src="analisis.js"></script>
+</body>
+</html>

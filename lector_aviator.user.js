@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Lector Aviator → Contador de velas
 // @namespace    contador-velas
-// @version      2.4
+// @version      2.5
 // @description  Lee la franja de valores (multiplicadores) del Aviator (astrobet, ecuabet) y los envía a tu app
 // @match        *://*/*
 // @grant        GM_setValue
@@ -73,7 +73,29 @@
   const relevante = /astrobet|ecuabet|spribe/i.test(host) || (!esTop && /astrobet|ecuabet/i.test(ancestros));
   if (!relevante) return;
 
-  const RE = /^\s*(\d{1,6}(?:[.,]\d{1,2})?)\s*x\s*$/i;
+  // ── Lectura robusta de multiplicadores ────────────────────────────────
+  // Antes solo se aceptaba "123.45x". Ahora también valores de 100x y de 1000x o más
+  // con separador de miles, tal como los muestra el juego según el idioma:
+  //   2.35x · 123,45x · 1234.56x · 1,234.56x · 1.234,56x · 1 234.56x · 1'234.56x · 12,345x
+  // (El Aviator siempre muestra 2 decimales: "1,234" o "1.234" se leen como mil doscientos treinta y cuatro.)
+  function numeroDeTexto(s) {
+    s = String(s).replace(/[\u00a0\u202f]/g, ' ').trim();
+    let m = s.match(/^(\d{1,9})(?:[.,](\d{1,2}))?$/);                    // simple: 123 · 123.45 · 123,45
+    if (m) return parseFloat(m[1] + (m[2] ? '.' + m[2] : ''));
+    m = s.match(/^(\d{1,3}(?:[,.' ’]\d{3})+)(?:([.,])(\d{1,2}))?$/);     // con miles: 1,234.56 · 1.234,56 · 1 234.56
+    if (!m) return null;
+    const seps = m[1].match(/[,.' ’]/g);
+    if (new Set(seps).size !== 1) return null;                           // todos los separadores de miles iguales
+    if (m[2] && m[2] === seps[0]) return null;                           // el decimal no puede ser el mismo carácter
+    return parseFloat(m[1].replace(/[,.' ’]/g, '') + (m[3] ? '.' + m[3] : ''));
+  }
+  const RE_RAPIDO = /^\s*\d[\d\s.,'’]{0,20}\s*[x×]\s*$/i;                // filtro rápido antes de analizar
+  function leerMult(t) {
+    if (typeof t !== 'string' || t.length > 28 || !RE_RAPIDO.test(t)) return null;
+    return numeroDeTexto(t.replace(/\s*[x×]\s*$/i, ''));
+  }
+  const canon = t => { const m = leerMult(t); return m === null ? null : m.toFixed(2) + 'x'; };   // "1,234.56x" → "1234.56x"
+  const RE = { test: t => leerMult(t) !== null };                        // mismo uso que antes: RE.test(texto)
   const KEY_ESTADO = esTop ? 'est_top' : 'est_frame';
   const estado = (txt, n) => { try { GM_setValue(KEY_ESTADO, { t: Date.now(), host, txt, n: n || 0 }); } catch (e) {} };
 
@@ -105,7 +127,7 @@
       const t = hoja.textContent.trim();
       if (!RE.test(t)) return;
       const r = hoja.getBoundingClientRect();
-      items.push({ x: r.left, top: r.top, w: r.width, h: r.height, v: t.replace(',', '.').replace(/x/i, 'x') });
+      items.push({ x: r.left, top: r.top, w: r.width, h: r.height, v: canon(t) });
     });
     if (items.length >= 3) {
       // Solo elementos visibles y UNA sola fila (la que tiene más valores): evita leer dos veces el mismo valor
@@ -127,7 +149,7 @@
     const cand = [];
     for (const el of hojas(document.body)) {
       const r = visible(el); if (!r) continue;
-      cand.push({ x: r.left, top: r.top, v: el.textContent.trim().replace(',', '.') });
+      cand.push({ x: r.left, top: r.top, v: canon(el.textContent) });
     }
     if (cand.length < 3) return null;
     cand.sort((a, b) => a.top - b.top);

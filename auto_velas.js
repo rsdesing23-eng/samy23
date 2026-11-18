@@ -26,10 +26,32 @@
     return { btn: 'btn1', nombre: 'Roja' };
   }
   // Colores como en el sitio (Aviator): azul < 2x · morado 2–10x · rosa ≥ 10x
-  const colSitio = m => m >= 10 ? '#d21cc0' : m >= 2 ? '#a259ff' : '#34b4ff';
+  // ≥100x y ≥1000x tienen su propio color para distinguirlos de una rosa normal
+  const colSitio = m => m >= 1000 ? '#ffe600' : m >= 100 ? '#ff9f1a' : m >= 10 ? '#d21cc0' : m >= 2 ? '#a259ff' : '#34b4ff';
+  const fmtM = m => Number(m).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const etiquetaAlta = m => m >= 1000 ? ' · ≥1000x' : m >= 100 ? ' · ≥100x' : '';
+
+  // Lectura robusta: 123.45 · 1234.56 · 1,234.56 · 1.234,56 · 1 234.56 · 1'234.56 (con o sin "x")
+  function numeroDeTexto(s) {
+    s = String(s).replace(/[\u00a0\u202f]/g, ' ').trim();
+    let m = s.match(/^(\d{1,9})(?:[.,](\d{1,2}))?$/);                    // simple: 123 · 123.45 · 123,45
+    if (m) return parseFloat(m[1] + (m[2] ? '.' + m[2] : ''));
+    m = s.match(/^(\d{1,3}(?:[,.' ’]\d{3})+)(?:([.,])(\d{1,2}))?$/);     // con miles: 1,234.56 · 1.234,56 · 1 234.56
+    if (!m) return null;
+    const seps = m[1].match(/[,.' ’]/g);
+    if (new Set(seps).size !== 1) return null;                           // todos los separadores de miles iguales
+    if (m[2] && m[2] === seps[0]) return null;                           // el decimal no puede ser el mismo carácter
+    return parseFloat(m[1].replace(/[,.' ’]/g, '') + (m[3] ? '.' + m[3] : ''));
+  }
 
   function leerValor(x) {
-    const m = parseFloat(String(x).replace(/[^0-9.,]/g, '').replace(',', '.'));
+    let m;
+    if (typeof x === 'number') m = x;
+    else {
+      const limpio = String(x).replace(/\s*[x×]\s*$/i, '').replace(/[^0-9.,'’\s\u00a0\u202f]/g, '').trim();
+      m = numeroDeTexto(limpio);
+      if (m === null) m = parseFloat(String(x).replace(/[^0-9.,]/g, '').replace(',', '.'));   // respaldo (comportamiento anterior)
+    }
     return (isFinite(m) && m >= 1) ? m : null;
   }
 
@@ -108,7 +130,7 @@
     historial.push({ m });
     if (historial.length > 300) historial.shift();
     guardarHist();
-    $('pa-ult').textContent = `${m.toFixed(2)}x (${k.nombre})`;
+    $('pa-ult').textContent = `${fmtM(m)}x (${k.nombre}${etiquetaAlta(m)})`;
     $('pa-ult').style.color = colSitio(m);
     refrescar();
     try { window.dispatchEvent(new CustomEvent('valor-juego', { detail: { m, nombre: k.nombre, masivo: !!masivo, manual: String(id || '').startsWith('manual'), t: Date.now(), sitio: (() => { try { return new URL(conn.url).hostname.replace(/^www\./, ''); } catch (e) { return ''; } })() } })); } catch (e) {}
